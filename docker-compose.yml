@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - VIRUSTOTAL_API_KEY=${VIRUSTOTAL_API_KEY}
+      - WEBRISK_API_KEY=${WEBRISK_API_KEY}
+      - GEMINI_APIKEY=${GEMINI_APIKEY}
+    restart: unless-stopped
+    networks:
+      - mata_network
+
+  telegram_bot:
+    build:
+      context: ./clients/telegram_bot
+      dockerfile: Dockerfile
+    environment:
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - API_BACKEND_URL=http://backend:8000/api/v1/scan
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - mata_network
+
+  web_frontend:
+    build:
+      context: ./clients/web_frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1/scan
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - mata_network
+
+networks:
+  mata_network:
+    driver: bridge
