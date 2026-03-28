@@ -45,5 +45,28 @@ docker-compose up --build -d
 - **FastAPI Specs**: `http://localhost:8000/docs`
 - **Telegram Bot**: Operates silently in the background, listening to chat payloads.
 
-## Production Deployments
-The `backend` and `web_frontend` Dockerfiles are entirely self-contained. You can immediately push the builds into Google Artifact Registry and bind them to **Google Cloud Run** or **GKE**.
+## 🚀 Production Deployment (Terraform + Cloud Build)
+
+Project Mata-Mata is configured for modern, automated deployments using **Terraform (Infrastructure-as-Code)** and **Google Cloud Build (CI/CD)**.
+
+### Automated CI/CD Workflow (Git Push)
+The repository uses Google Cloud Build 2nd Gen Triggers. The moment you push to the `main` branch, GCP intercepts the change and hot-swaps the container:
+1. **Intercepts** folder changes (`backend/`, `clients/*`).
+2. **Builds** the Dockerfile.
+3. **Pushes** image to Artifact Registry.
+4. **Deploys** to Google Cloud Run automatically.
+
+### Running Terraform (One-time Setup)
+
+1. **Push Secrets**: Replicate local `.env` keys securely into GCP Secret Manager:
+   ```bash
+   chmod +x push_secrets.sh
+   ./push_secrets.sh
+   ```
+
+2. **Provision Infrastructure**:
+   ```bash
+   cd terraform
+   terraform init
+   terraform apply
+   ```

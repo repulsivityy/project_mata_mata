@@ -1,0 +1,38 @@
+# Local Environment Variables
+.env
+.backend_url.tmp
+backend/frontend.env
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+terraform.tfvars
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Node (Next.js)
+clients/web_frontend/node_modules/
+clients/web_frontend/.next/
+clients/web_frontend/out/
+clients/web_frontend/build/
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

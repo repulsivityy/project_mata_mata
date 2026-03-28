@@ -1,0 +1,43 @@
+steps:
+  # 1. Fetch the Backend URL dynamically from the active Cloud Run instance
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'get-backend-url'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        BACKEND_URL=$$(gcloud run services describe mata-backend --region=asia-southeast1 --format='value(status.url)')
+        echo "NEXT_PUBLIC_API_URL=$$BACKEND_URL/api/v1/scan" > /workspace/frontend.env
+
+  # 2. Build the container image using Buildpacks (which natively handles the env-vars) or classic Docker
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-frontend'
+    entrypoint: 'bash'
+    args: 
+      - '-c'
+      - |
+        export $$(cat /workspace/frontend.env | xargs)
+        docker build -t asia-southeast1-docker.pkg.dev/$$PROJECT_ID/mata-repo/mata-frontend:$$COMMIT_SHA \
+        --build-arg NEXT_PUBLIC_API_URL=$$NEXT_PUBLIC_API_URL \
+        -f clients/web_frontend/Dockerfile clients/web_frontend/
+
+  # 3. Push the container image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-frontend'
+    args: ['push', 'asia-southeast1-docker.pkg.dev/$PROJECT_ID/mata-repo/mata-frontend:$COMMIT_SHA']
+
+  # 4. Deploy identical image to the existing Terraform-managed Cloud Run service
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-frontend'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'mata-frontend'
+      - '--image'
+      - 'asia-southeast1-docker.pkg.dev/$PROJECT_ID/mata-repo/mata-frontend:$COMMIT_SHA'
+      - '--region'
+      - 'asia-southeast1'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
