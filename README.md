@@ -77,3 +77,4 @@ The repository uses Google Cloud Build 2nd Gen Triggers. The moment you push to 
 - [ ] Implement URLScan Results
 - [x] Upgrade to Gemini 3.0 Flash
 - [ ] Add ability to submit to Webrisk (Enterprise)
+- [ ] Link analysis engine to [Project Harimau](https://github.com/repulsivityy/project_harimau)

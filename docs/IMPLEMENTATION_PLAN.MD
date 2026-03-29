@@ -26,3 +26,5 @@ Instead of refactoring the old `telegram_url_checker` monolithic platform in pla
 1. Build `Dockerfile` configurations specifically optimizing for the installation of heavy system dependencies like `playwright` binaries within the `backend/`.
 2. Supply a root `docker-compose.yml` defining the API Backend, Telegram Client, and NextJS UI running as native services side-by-side.
 3. Verify that the structure natively translates for immediate production deployments via **Google Cloud Run** and **GKE**.
+
+
