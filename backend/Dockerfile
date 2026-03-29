@@ -25,7 +25,7 @@ COPY api/ ./backend/api/
 ENV PYTHONPATH=/app
 
 # Expose the API port
-EXPOSE 8000
+EXPOSE 8080
 
 # Start FastAPI
-CMD ["uvicorn", "backend.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "backend.api.main:app", "--host", "0.0.0.0", "--port", "8080"]
