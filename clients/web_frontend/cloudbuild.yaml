@@ -17,7 +17,7 @@ steps:
       - '-c'
       - |
         export $$(cat /workspace/frontend.env | xargs)
-        docker build -t asia-southeast1-docker.pkg.dev/$$PROJECT_ID/mata-repo/mata-frontend:$$COMMIT_SHA \
+        docker build -t asia-southeast1-docker.pkg.dev/$PROJECT_ID/mata-repo/mata-frontend:$COMMIT_SHA \
         --build-arg NEXT_PUBLIC_API_URL=$$NEXT_PUBLIC_API_URL \
         -f clients/web_frontend/Dockerfile clients/web_frontend/
 
