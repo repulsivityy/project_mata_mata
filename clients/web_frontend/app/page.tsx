@@ -42,7 +42,7 @@ export default function MataMataDashboard() {
         <h1 className="text-5xl font-extrabold tracking-tight mb-4 tracking-tighter bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent">
           Project Mata-Mata
         </h1>
-        <p className="text-gray-400 text-lg">Omniscient Threat Intelligence & Phishing Analysis</p>
+        <p className="text-gray-400 text-lg">Threat Intelligence & Phishing Analysis</p>
       </header>
 
       {/* Input Box */}
@@ -69,9 +69,10 @@ export default function MataMataDashboard() {
         <div className="flex flex-col items-center justify-center py-20 animate-pulse">
            <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mb-6"></div>
            <p className="text-blue-400 animate-pulse font-mono tracking-widest text-sm text-center">
-             [1] DISPATCHING BROWSER INSTANCES...<br/>
-             [2] RETRIEVING DOM & NETWORK TELEMETRY...<br/>
-             [3] INITIALIZING GEMINI VISION DETECTORS...<br/>
+            [1] VALIDATING AGAINST THREAT INTEL...<br />
+            [2] DISPATCHING BROWSER INSTANCES...<br />
+            [3] RETRIEVING DOM & NETWORK TELEMETRY...<br />
+            [4] INITIALIZING GEMINI VISION DETECTORS...<br />
              This will take ~30 seconds.
            </p>
         </div>
@@ -103,21 +104,14 @@ export default function MataMataDashboard() {
             {Object.entries(result.results || {}).map(([checker, data]: [string, any]) => (
               <div key={checker} className={`glassmorphism p-6 rounded-2xl border ${data.error ? 'border-yellow-500/30' : data.is_malicious ? 'border-red-500/50 bg-red-500/5' : 'border-emerald-500/30 bg-emerald-500/5'}`}>
                 <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">{checker}</h3>
-                  <div className="flex gap-2">
-                    <span className={`px-3 py-1 text-xs font-bold rounded-full tracking-widest uppercase
-                      ${data.error ? 'bg-yellow-500/20 text-yellow-300' :
-                        data.is_malicious ? 'bg-red-500/20 text-red-400 border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 
+                  <h3 className="text-xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">{checker === "Google Web Risk" ? "Google Web Risk Eval" : checker}</h3>
+                  <span className={`px-3 py-1 text-xs font-bold rounded-full tracking-widest uppercase
+                    ${data.error ? 'bg-yellow-500/20 text-yellow-300' :
+                      data.is_malicious ? 'bg-red-500/20 text-red-400 border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.3)]' :
                         'bg-emerald-500/20 text-emerald-400'}
-                    `}>
-                      {data.error ? 'Error' : data.is_malicious ? 'Malicious' : 'Clean'}
-                    </span>
-                    {data.risk_factors?.gti_verdict && (
-                      <span className="px-3 py-1 text-xs font-bold rounded-full tracking-widest uppercase bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-                        GTI: {data.risk_factors.gti_verdict}
-                      </span>
-                    )}
-                  </div>
+                  `}>
+                    {data.error ? 'Error' : data.is_malicious ? 'Malicious' : 'Clean'}
+                  </span>
                 </div>
                 
                 <p className="text-gray-300 font-medium mb-4">{data.summary}</p>
@@ -130,6 +124,19 @@ export default function MataMataDashboard() {
                 )}
               </div>
             ))}
+
+            {/* Dedicated card for GTI Verdict moved from mockup flow */}
+            {result.results?.["VirusTotal"]?.risk_factors?.gti_verdict && (
+              <div className="glassmorphism p-6 rounded-2xl border border-blue-500/30 bg-blue-500/5">
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">GTI Assessment</h3>
+                  <span className="px-3 py-1 text-xs font-bold rounded-full tracking-widest uppercase bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                    {result.results["VirusTotal"].risk_factors.gti_verdict}
+                  </span>
+                </div>
+                <p className="text-gray-400 text-sm">Google Threat Intelligence verdict extracted from VirusTotal response.</p>
+              </div>
+            )}
           </div>
         </div>
       )}
