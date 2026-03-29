@@ -134,7 +134,9 @@ export default function MataMataDashboard() {
                     {result.results["VirusTotal"].risk_factors.gti_verdict}
                   </span>
                 </div>
-                <p className="text-gray-400 text-sm">Google Threat Intelligence verdict extracted from VirusTotal response.</p>
+                <p className="text-gray-400 text-sm">
+                  {result.results["VirusTotal"].details?.description || "Google Threat Intelligence verdict extracted from VirusTotal response."}
+                </p>
               </div>
             )}
           </div>
