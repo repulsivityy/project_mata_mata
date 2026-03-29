@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 # Constants
 MALICIOUS_THRESHOLD = 5
 API_TIMEOUT = 10
-DEBUG_MODE = False
+DEBUG_MODE = True
 
 class VirusTotalChecker(BaseChecker):
     SOURCE_NAME = "VirusTotal"
