@@ -3,6 +3,7 @@ import logging
 import asyncio
 import aiohttp
 import re
+import base64
 from typing import Dict, Optional
 import urllib.parse
 from backend.core.models import ScanResult
