@@ -75,7 +75,7 @@ graph TD
 
 ### 2. `backend/core/` (The Heavy Business Engine)
 - **`orchestrator.py`**: Manages the multi-processing threads and captures responses. If Google Web Risk surfaces a deterministic "High Threat" early, the Orchestrator safely cancels the Playwright render to conserve API credits.
-- **`scanners.py`**: Wrappers for VirusTotal static vendor checks, thresholds, and Google Threat Intelligence heuristics.
+- **`scanners.py`**: Wrappers for VirusTotal static vendor checks, thresholds, and Google Threat Intelligence (GTI) heuristics. (Note: Supports fallback to standard VT scoring if the API key lacks GTI access; requires `x-tool: project-mata-mata` header for tracking).
 - **`ai_phishing_detector.py`**: Spawns independent unshielded headless instances to grab screenshot binary streams + intercept in-line Javascript payload dumps. This payload is shipped straight to **Gemini 2.5 Multi-Modal API** for context inference.
 
 ### 3. `clients/telegram_bot/` (The Conversational Consumer)

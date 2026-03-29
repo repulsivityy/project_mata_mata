@@ -104,13 +104,20 @@ export default function MataMataDashboard() {
               <div key={checker} className={`glassmorphism p-6 rounded-2xl border ${data.error ? 'border-yellow-500/30' : data.is_malicious ? 'border-red-500/50 bg-red-500/5' : 'border-emerald-500/30 bg-emerald-500/5'}`}>
                 <div className="flex justify-between items-start mb-4">
                   <h3 className="text-xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">{checker}</h3>
-                  <span className={`px-3 py-1 text-xs font-bold rounded-full tracking-widest uppercase
-                    ${data.error ? 'bg-yellow-500/20 text-yellow-300' :
-                      data.is_malicious ? 'bg-red-500/20 text-red-400 border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 
-                      'bg-emerald-500/20 text-emerald-400'}
-                  `}>
-                    {data.error ? 'Error' : data.is_malicious ? 'Malicious' : 'Clean'}
-                  </span>
+                  <div className="flex gap-2">
+                    <span className={`px-3 py-1 text-xs font-bold rounded-full tracking-widest uppercase
+                      ${data.error ? 'bg-yellow-500/20 text-yellow-300' :
+                        data.is_malicious ? 'bg-red-500/20 text-red-400 border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 
+                        'bg-emerald-500/20 text-emerald-400'}
+                    `}>
+                      {data.error ? 'Error' : data.is_malicious ? 'Malicious' : 'Clean'}
+                    </span>
+                    {data.risk_factors?.gti_verdict && (
+                      <span className="px-3 py-1 text-xs font-bold rounded-full tracking-widest uppercase bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                        GTI: {data.risk_factors.gti_verdict}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 
                 <p className="text-gray-300 font-medium mb-4">{data.summary}</p>

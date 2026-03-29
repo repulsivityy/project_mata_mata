@@ -19,7 +19,7 @@ project_mata_mata/
 ```
 
 ## Core Scanners
-- **VirusTotal**: Checks raw static community detections and Google Threat Intelligence.
+- **VirusTotal**: Checks raw static community detections and Google Threat Intelligence (GTI) scoring. (Note: Falls back to standard VT scoring if the API key lacks GTI access; requires `x-tool: project-mata-mata` header for tracking).
 - **Google Web Risk**: Evaluates domains against global blacklists.
 - **Gemini 2.5 Multi-Modal Agent**: Renders Chromium headless instances behind Cloudflare shields to analyze visual DOM spoofing, inline hidden scripts, and exfiltrated background network POSTs.
 
@@ -70,3 +70,9 @@ The repository uses Google Cloud Build 2nd Gen Triggers. The moment you push to 
    terraform init
    terraform apply
    ```
+
+
+### Roadmap
+- [ ] Implement WHOIS Registration
+- [ ] Implement URLScan Results
+- [x] Upgrade to Gemini 3.0 Flash

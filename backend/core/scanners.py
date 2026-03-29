@@ -23,7 +23,7 @@ class VirusTotalChecker(BaseChecker):
     def __init__(self, api_key: str, session: aiohttp.ClientSession):
         super().__init__(session)
         self.api_key = api_key
-        self.headers = {"x-apikey": self.api_key, "x-tool": "telegram-phishing-bot", "Accept": "application/json"}
+        self.headers = {"x-apikey": self.api_key, "x-tool": "project-mata-mata", "Accept": "application/json"}
 
     async def _make_request(self, endpoint, method='GET', **kwargs):
         return await self.session.request(method, endpoint, headers=self.headers, timeout=API_TIMEOUT, **kwargs)
