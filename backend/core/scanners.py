@@ -318,7 +318,6 @@ class WebRiskChecker(BaseChecker):
 #####################
 # Checks screenshot against Gemini AI
 #####################
-from ai_phishing_detector.ai_phishing_detector import analyze_url_for_phishing
 
 class AIImageChecker(BaseChecker):
     SOURCE_NAME = "AI Analysis"
