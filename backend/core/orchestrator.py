@@ -37,6 +37,9 @@ class ScanOrchestrator:
                 await self._session.close()
 
     def _compute_final_verdict(self, results_map: Dict) -> str:
+        import logging
+        logger = logging.getLogger(__name__)
+
         vt = results_map.get("VirusTotal", {})
         wr = results_map.get("Google Web Risk", {})
         ai = results_map.get("AI Analysis", {})
@@ -57,22 +60,27 @@ class ScanOrchestrator:
         cond1 = gti_is_malicious or wr_is_malicious
         
         # Condition 2: (AI or VT > 5)
-        # Note: We use is_malicious_threshold which respects the per-scan override!
         cond2 = (ai_factors.get("ai_risk") == "high") or vt_factors.get("is_malicious_threshold", False)
+        
+        logger.info(f"⚖️ Verdict computation: gti_verdict={gti_verdict}, gti_is_malicious={gti_is_malicious}, wr_is_malicious={wr_is_malicious}")
+        logger.info(f"⚖️ Verdict computation: ai_risk={ai_factors.get('ai_risk')}, vt_thresh={vt_factors.get('is_malicious_threshold')}")
+        logger.info(f"⚖️ Verdict computation: cond1={cond1}, cond2={cond2}")
         
         # 1. DANGER
         if cond1 and cond2:
+            logger.info("⚖️ Verdict: DANGER")
             return "DANGER"
 
         # 2. SAFE
-        # "if ((gti_verdict = benign or webrisk = safe) and vt = 0 detection)"
         wr_is_safe = wr_factors.get("is_clean", False)
         gti_is_benign = gti_verdict == "VERDICT_HARMLESS" or gti_verdict == "benign"
         
         if (gti_is_benign or wr_is_safe) and vt_detections == 0:
+            logger.info("⚖️ Verdict: SAFE")
             return "SAFE"
 
-        # 3. Falling back to WARNING (Suspicious)
+        # 3. Falling back to WARNING
+        logger.info("⚖️ Verdict: Falling back to WARNING")
         return "WARNING"
 
     async def scan_url(self, item_value: str, item_type: str = "url", vt_threshold: int = 5) -> Dict:
