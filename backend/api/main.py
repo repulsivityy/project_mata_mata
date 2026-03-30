@@ -1,7 +1,11 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import logging
+import os
+import hashlib
+import hmac
+from google.cloud import secretmanager
 
 from backend.core.orchestrator import ScanOrchestrator
 
@@ -10,6 +14,45 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Project Mata-Mata API", version="1.0.0")
 
+# Global variables in memory for security
+EXPECTED_HASH = None
+SALT = os.urandom(16) # Generate a random salt on startup
+
+def get_api_key_from_secret_manager():
+    project_id = os.environ.get("PROJECT_ID", "virustotal-lab")
+    secret_id = "MATA_API_KEY"
+    
+    try:
+        client = secretmanager.SecretManagerServiceClient()
+        name = f"projects/{project_id}/secrets/{secret_id}/versions/latest"
+        response = client.access_secret_version(request={"name": name})
+        return response.payload.data.decode("UTF-8")
+    except Exception as e:
+        logger.error(f"❌ Failed to fetch secret from Secret Manager: {e}")
+        return None
+
+# Fetch and hash on startup (Fail hard approach)
+raw_key = get_api_key_from_secret_manager()
+if raw_key:
+    # Compute HMAC-SHA256
+    EXPECTED_HASH = hmac.new(SALT, raw_key.encode('utf-8'), hashlib.sha256).hexdigest()
+    logger.info("🔑 API Key fetched and hashed successfully in memory.")
+else:
+    logger.error("❌ MATA_API_KEY not configured or unreachable! Failing hard.")
+    raise RuntimeError("Server misconfiguration: MATA_API_KEY is not set or unreachable.")
+
+async def verify_api_key(x_api_key: str = Header(None)):
+    if not EXPECTED_HASH:
+        raise HTTPException(status_code=500, detail="Server misconfiguration: API Key not loaded.")
+    if not x_api_key:
+        raise HTTPException(status_code=401, detail="Unauthorized: Missing API Key.")
+    
+    # Compute HMAC-SHA256 of received key
+    received_hash = hmac.new(SALT, x_api_key.encode('utf-8'), hashlib.sha256).hexdigest()
+    
+    # Secure comparison
+    if not hmac.compare_digest(received_hash, EXPECTED_HASH):
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid API Key.")
 # Enable CORS for all domains
 app.add_middleware(
     CORSMiddleware,
@@ -36,7 +79,7 @@ async def shutdown_event():
     logger.info("Closing orchestrator sessions...")
     await orchestrator.close()
 
-@app.post("/api/v1/scan", response_model=ScanResponse)
+@app.post("/api/v1/scan", response_model=ScanResponse, dependencies=[Depends(verify_api_key)])
 async def scan_url(request: ScanRequest):
     logger.info(f"Received scan request for URL: {request.url}")
     

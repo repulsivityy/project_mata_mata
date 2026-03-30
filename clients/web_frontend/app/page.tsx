@@ -18,7 +18,7 @@ export default function MataMataDashboard() {
 
     try {
       // Pointing to the dockerized fastAPI instance
-      const res = await fetch(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1/scan', {
+      const res = await fetch('/api/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, vt_threshold: parseInt(threshold) || 5 })

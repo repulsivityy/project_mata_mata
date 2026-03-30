@@ -38,5 +38,6 @@ push_secret "VIRUSTOTAL_API_KEY" "MATA_VIRUSTOTAL_API_KEY"
 push_secret "WEBRISK_API_KEY" "MATA_WEBRISK_API_KEY"
 push_secret "GEMINI_APIKEY" "MATA_GEMINI_APIKEY"
 push_secret "TELEGRAM_TOKEN" "MATA_TELEGRAM_TOKEN"
+push_secret "MATA_API_KEY" "MATA_API_KEY"
 
 echo "✅ Secrets synced successfully!"
