@@ -44,6 +44,14 @@ export default function MataMataDashboard() {
           Project Mata-Mata
         </h1>
         <p className="text-gray-400 text-lg">Threat Intelligence & Phishing Analysis</p>
+        <p className="text-gray-400 text-lg">Project Mata-Mata (The Eyes, or more colloquially known as "The Police" in SEA), integrates multi-source intelligence to determine a comprehensive risk assessment for a given URL.</p>
+        <p className="text-gray-400 text-lg">It leverages Google Threat Intelligence, VirusTotal, Web Risk Evaluate, and Multi-Model Gemini Agent to determine a comprehensive risk assessment for a given URL.</p>
+        <div className="mt-6 max-w-xl mx-auto text-left text-sm text-gray-400 space-y-1 bg-white/5 p-4 rounded-xl border border-white/5">
+          <p><strong>Scoring Logic</strong></p>
+          <p>🔴 <strong>DANGER:</strong> Requires both a Core Intel hit (GTI/Web Risk) and a Verification hit (AI High or VT &gt; 5).</p>
+          <p>🟢 <strong>SAFE:</strong> Requires a clean indicator (GTI Benign or Web Risk Safe) and exactly 0 detections.</p>
+          <p>🟡 <strong>WARNING:</strong> The fallback state for any link failing both tests above.</p>
+        </div>
       </header>
 
       {/* Input Box */}
