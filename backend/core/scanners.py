@@ -21,10 +21,11 @@ class VirusTotalChecker(BaseChecker):
     SOURCE_NAME = "VirusTotal"
     BASE_URL = "https://www.virustotal.com/api/v3"
 
-    def __init__(self, api_key: str, session: aiohttp.ClientSession):
+    def __init__(self, api_key: str, session: aiohttp.ClientSession, threshold: int = 5):
         super().__init__(session)
         self.api_key = api_key
         self.headers = {"x-apikey": self.api_key, "x-tool": "project-mata-mata", "Accept": "application/json"}
+        self.threshold = threshold
 
     async def _make_request(self, endpoint, method='GET', **kwargs):
         return await self.session.request(method, endpoint, headers=self.headers, timeout=API_TIMEOUT, **kwargs)
@@ -105,7 +106,7 @@ class VirusTotalChecker(BaseChecker):
         details = stats.copy()
         risk_factors = {
             "classic_score": malicious_count,
-            "is_malicious_threshold": malicious_count >= MALICIOUS_THRESHOLD
+            "is_malicious_threshold": malicious_count >= self.threshold
         }
 
         # Check for GTI assessment

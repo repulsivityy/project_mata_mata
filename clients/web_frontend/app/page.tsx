@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 
 export default function MataMataDashboard() {
   const [url, setUrl] = useState('')
+  const [threshold, setThreshold] = useState('5')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState('')
@@ -20,7 +21,7 @@ export default function MataMataDashboard() {
       const res = await fetch(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url })
+        body: JSON.stringify({ url, vt_threshold: parseInt(threshold) || 5 })
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.detail || 'Scan failed')
@@ -54,6 +55,16 @@ export default function MataMataDashboard() {
           placeholder="Paste external URL to scan..." 
           className="w-full bg-transparent text-white px-6 py-4 outline-none placeholder:text-gray-500 text-lg"
           required
+        />
+        <input 
+          type="number" 
+          min="1"
+          max="100"
+          value={threshold}
+          onChange={(e) => setThreshold(e.target.value)}
+          placeholder="Thresh" 
+          className="w-24 bg-transparent text-white px-2 py-4 outline-none placeholder:text-gray-500 text-lg text-center border-l border-white/10"
+          title="VirusTotal Malicious Threshold"
         />
         <button 
           type="submit" 

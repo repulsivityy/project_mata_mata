@@ -78,7 +78,7 @@ class ScanOrchestrator:
 
         return "WARNING"
 
-    async def scan_url(self, item_value: str, item_type: str = "url") -> Dict:
+    async def scan_url(self, item_value: str, item_type: str = "url", vt_threshold: int = 5) -> Dict:
         """
         Runs the full scan pipeline and returns a dictionary.
         """
@@ -86,7 +86,7 @@ class ScanOrchestrator:
         checkers = []
         
         if VIRUSTOTAL_API_KEY and not VIRUSTOTAL_API_KEY.startswith("YOUR_"):
-            checkers.append(VirusTotalChecker(VIRUSTOTAL_API_KEY, session))
+            checkers.append(VirusTotalChecker(VIRUSTOTAL_API_KEY, session, threshold=vt_threshold))
         if WEBRISK_API_KEY and not WEBRISK_API_KEY.startswith("YOUR_"):
             checkers.append(WebRiskChecker(WEBRISK_API_KEY, session))
             

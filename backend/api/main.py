@@ -23,6 +23,7 @@ orchestrator = ScanOrchestrator()
 
 class ScanRequest(BaseModel):
     url: str
+    vt_threshold: int = 5
 
 class ScanResponse(BaseModel):
     url: str
@@ -49,7 +50,7 @@ async def scan_url(request: ScanRequest):
     
     # Wait for the Orchestrator to fully run Playwright + VT + WebRisk
     try:
-        report = await orchestrator.scan_url(target["value"], target["type"])
+        report = await orchestrator.scan_url(target["value"], target["type"], vt_threshold=request.vt_threshold)
         if "error" in report and "results" not in report:
             raise HTTPException(status_code=500, detail=report["error"])
         
