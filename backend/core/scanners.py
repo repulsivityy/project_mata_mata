@@ -306,6 +306,7 @@ class WebRiskChecker(BaseChecker):
         super().__init__(session)
         self.api_key = api_key
 
+    def _parse_results(self, wr_data: Dict) -> ScanResult:
         if not wr_data or "scores" not in wr_data: 
             return ScanResult(False, "No detections", self.SOURCE_NAME)
         
