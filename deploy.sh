@@ -49,6 +49,7 @@ push_secret "VIRUSTOTAL_API_KEY" "MATA_VIRUSTOTAL_API_KEY"
 push_secret "WEBRISK_API_KEY" "MATA_WEBRISK_API_KEY"
 push_secret "GEMINI_APIKEY" "MATA_GEMINI_APIKEY"
 push_secret "TELEGRAM_TOKEN" "MATA_TELEGRAM_TOKEN"
+push_secret "MATA_API_KEY" "MATA_API_KEY"
 
 # Ensure the Cloud Run (Compute Engine default service account) has access to read these secrets
 PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)")
@@ -88,7 +89,8 @@ gcloud run deploy mata-frontend \
   --region $REGION \
   --allow-unauthenticated \
   --set-build-env-vars NEXT_PUBLIC_API_URL="${BACKEND_URL}/api/v1/scan" \
-  --set-env-vars NEXT_PUBLIC_API_URL="${BACKEND_URL}/api/v1/scan"
+  --set-env-vars NEXT_PUBLIC_API_URL="${BACKEND_URL}/api/v1/scan" \
+  --set-secrets="MATA_API_KEY=MATA_API_KEY:latest"
 
 echo "✅ Web Frontend deployment complete."
 

@@ -18,6 +18,13 @@ project_mata_mata/
 └── docker-compose.yml        # Orchestrates all 3 platforms seamlessly
 ```
 
+## 🔐 Security & API Authentication
+
+To prevent abuse and protect sensitive threat intelligence keys, Project Mata-Mata implements a strict security layer:
+- **HMAC-SHA256 Verification**: The FastAPI backend requires an `X-API-KEY` header on all requests. It verifies the signature using a secure constant-time HMAC-SHA256 hash comparison to protect against timing attacks.
+- **Backend-for-Frontend (BFF) Proxy**: The Next.js web dashboard does NOT call the backend directly from the browser. Instead, it hits its own server-side Next.js API route (`/api/scan`), which securely injects the API key from server-side environment variables. This prevents exposing your master keys in client-side network traces!
+- **Fail-Hard Resolution**: On startup, the backend attempts to fetch the raw `MATA_API_KEY` from Google Secret Manager. If it is missing or unreachable, the server crashes intentionally on start ("Fail Hard") to avoid running in an unauthenticated exposure state.
+
 ## Core Scanners
 - **VirusTotal**: Checks raw static community detections and Google Threat Intelligence (GTI) scoring. (Note: Falls back to standard VT scoring if the API key lacks GTI access; requires `x-tool: project-mata-mata` header for tracking).
 - **Google Web Risk**: Evaluates domains against global blacklists.
@@ -39,6 +46,7 @@ TELEGRAM_TOKEN=your_bot_token_here
 VIRUSTOTAL_API_KEY=your_vt_key
 WEBRISK_API_KEY=your_webrisk_key
 GEMINI_APIKEY=your_gemini_key
+MATA_API_KEY=your_internal_secret_key
 DEBUG_MODE=false
 ```
 

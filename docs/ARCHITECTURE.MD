@@ -36,8 +36,9 @@ graph TD
     end
 
     %% Client Interactions
-    Telegram -->|HTTP POST JSON| API
-    WebUI -->|HTTP POST JSON| API
+    Telegram -->|HTTP POST with API Key| API
+    WebUI -->|1. Internal Fetch| Proxy["🛡️ Next.js Proxy (/api/scan)"]
+    Proxy -->|2. HTTP POST with API Key| API
 
     %% Internal Routing
     API --> Extract
@@ -85,6 +86,7 @@ graph TD
 ### 4. `clients/web_frontend/` (The Unified UI Dashboard)
 - A highly stylized Dark-mode Single Page Application targeting Next.js React libraries.
 - Features neon threat indicators, a radar spinner, and beautiful tabular drill-downs of the scanner JSON outputs.
+- **BFF Proxy**: Includes a server-side API route (`app/api/scan/route.ts`) that acts as a secure Backend-for-Frontend proxy, protecting the master `MATA_API_KEY` from being exposed to the browser.
 
 ---
 
