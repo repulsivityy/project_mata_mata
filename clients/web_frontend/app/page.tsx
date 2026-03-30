@@ -34,13 +34,13 @@ export default function MataMataDashboard() {
   }
 
   return (
-    <main className="w-full max-w-7xl mx-auto p-8 relative flex flex-col items-center">
+    <main className="w-full max-w-7xl mx-auto p-4 md:p-8 relative flex flex-col items-center">
       {/* Logo */}
       <div className="mb-8">
         <img 
           src="/project_matamata.jpeg" 
           alt="Project Mata-Mata Logo" 
-          className="h-48 w-auto border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
+          className="h-32 md:h-48 w-auto border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
         />
       </div>
 
@@ -54,33 +54,33 @@ export default function MataMataDashboard() {
         
         {/* Scoring Logic Ribbon */}
         <div className="mt-8 flex flex-wrap justify-center gap-4 text-sm font-bold">
-          <span className="flex items-center gap-2 bg-[#ff007f] text-white px-4 py-2 rounded-none border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+          <span className="flex items-center gap-2 bg-[#ff007f] text-white px-4 py-2 rounded-none border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
             🔴 DANGER: Core + Verification Hit
           </span>
-          <span className="flex items-center gap-2 bg-[#00ffff] text-black px-4 py-2 rounded-none border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+          <span className="flex items-center gap-2 bg-[#00ffff] text-black px-4 py-2 rounded-none border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
             🟢 SAFE: Clean indicator & 0 Detections
           </span>
-          <span className="flex items-center gap-2 bg-[#ffff00] text-black px-4 py-2 rounded-none border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+          <span className="flex items-center gap-2 bg-[#ffff00] text-black px-4 py-2 rounded-none border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
             🟡 WARNING: Fallback state
           </span>
         </div>
       </header>
 
       {/* Input Box */}
-      <form onSubmit={handleScan} className="mb-12 relative z-10 bg-white p-6 rounded-none border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-4 w-full max-w-6xl">
-        <div className="flex gap-4">
+      <form onSubmit={handleScan} className="mb-12 relative z-10 bg-white p-4 md:p-6 rounded-none border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-4 w-full max-w-6xl">
+        <div className="flex flex-col md:flex-row gap-4">
           <input 
             type="text" 
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="Paste external URL to scan..." 
-            className="flex-grow bg-white text-black px-4 py-3 outline-none placeholder:text-gray-500 text-lg border-2 border-black"
+            className="flex-grow bg-white text-black px-4 py-3 outline-none placeholder:text-gray-500 text-lg border-2 border-black w-full"
             required
           />
           <button 
             type="submit" 
             disabled={loading}
-            className="bg-[#00ffff] hover:bg-[#00dada] text-black font-black py-3 px-8 border-2 border-black transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+            className="bg-[#00ffff] hover:bg-[#00dada] text-black font-black py-3 px-8 border-2 border-black transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] w-full md:w-auto"
           >
             {loading ? 'Scanning...' : 'Analyze Threat'}
           </button>
@@ -128,7 +128,7 @@ export default function MataMataDashboard() {
         <div className="space-y-6 w-full max-w-6xl">
           
           {/* Global Final Verdict Banner */}
-          <div className={`p-6 border-4 border-black flex items-center justify-between shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] ${
+          <div className={`p-6 border-4 border-black flex flex-col md:flex-row items-center justify-between gap-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] ${
             result.final_verdict === "DANGER" ? "bg-[#ff007f] text-white" :
             result.final_verdict === "SAFE" ? "bg-[#00ffff] text-black" :
             "bg-[#ffff00] text-black"
@@ -147,12 +147,12 @@ export default function MataMataDashboard() {
             </div>
           </div>
 
-          <div className="flex justify-between items-center bg-white p-6 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-4 md:p-6 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] gap-4">
             <div>
               <p className="text-gray-500 text-sm mb-1 uppercase tracking-widest font-bold">Target Evaluated</p>
               <h2 className="text-2xl font-mono text-black break-all font-bold">{result.url}</h2>
             </div>
-            <div className="text-right">
+            <div className="text-left md:text-right">
               <p className="text-gray-500 text-sm mb-1 uppercase tracking-widest font-bold">Type</p>
               <h2 className="text-xl font-mono text-black font-bold">{result.type}</h2>
             </div>
@@ -160,7 +160,7 @@ export default function MataMataDashboard() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
             {Object.entries(result.results || {}).map(([checker, data]: [string, any]) => (
-              <div key={checker} className={`bg-white p-6 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] ${
+              <div key={checker} className={`bg-white p-4 md:p-6 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] ${
                 data.error ? 'border-[#ffff00]' : 
                 data.risk_factors?.verdict === 'Malicious' ? 'bg-[#ff007f]/10' : 
                 data.risk_factors?.verdict === 'Suspicious' ? 'bg-[#ffff00]/10' :
@@ -213,7 +213,7 @@ export default function MataMataDashboard() {
 
             {/* Dedicated card for GTI Verdict moved from mockup flow */}
             {result.results?.["VirusTotal"]?.risk_factors?.gti_verdict && (
-              <div className="bg-white p-6 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+              <div className="bg-white p-4 md:p-6 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
                 <div className="flex justify-between items-start mb-4">
                   <h3 className="text-xl font-bold text-black">GTI Assessment</h3>
                   <span className="px-3 py-1 text-xs font-bold border-2 border-black bg-[#00ffff] text-black">
