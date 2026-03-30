@@ -37,31 +37,42 @@ class ScanOrchestrator:
                 await self._session.close()
 
     def _compute_final_verdict(self, results_map: Dict) -> str:
-        """
-        Unified scoring rule logic to compute "DANGER", "SAFE", or "WARNING" across scanners.
-        """
         vt = results_map.get("VirusTotal", {})
         wr = results_map.get("Google Web Risk", {})
         ai = results_map.get("AI Analysis", {})
 
-        # Extract verdicts
-        vt_verdict = vt.get("risk_factors", {}).get("verdict")
-        wr_verdict = wr.get("risk_factors", {}).get("verdict")
-        ai_verdict = ai.get("risk_factors", {}).get("verdict")
+        vt_factors = vt.get("risk_factors", {})
+        wr_factors = wr.get("risk_factors", {})
+        ai_factors = ai.get("risk_factors", {})
 
-        # 1. DANGER: If any backend scanner returns a Malicious verdict
-        if vt_verdict == "Malicious" or wr_verdict == "Malicious" or ai_verdict == "Malicious":
+        gti_verdict = vt_factors.get("gti_verdict")
+        gti_score = vt_factors.get("gti_score")
+        vt_detections = vt_factors.get("classic_score", 0)
+        
+        # Determine specific states
+        gti_is_malicious = (gti_score is not None and gti_score > 60) or gti_verdict == "VERDICT_MALICIOUS" or gti_verdict == "malicious"
+        wr_is_malicious = wr_factors.get("has_high_threat", False)
+        
+        # Condition 1: (GTI or Web Risk)
+        cond1 = gti_is_malicious or wr_is_malicious
+        
+        # Condition 2: (AI or VT > 5)
+        # Note: We use is_malicious_threshold which respects the per-scan override!
+        cond2 = (ai_factors.get("ai_risk") == "high") or vt_factors.get("is_malicious_threshold", False)
+        
+        # 1. DANGER
+        if cond1 and cond2:
             return "DANGER"
 
-        # 2. WARNING: If any of the core intelligence scanners returns Suspicious
-        # Note: We ignore AI here as it should not influence WARNING/SAFE state.
-        if vt_verdict == "Suspicious" or wr_verdict == "Suspicious":
-            return "WARNING"
-
-        # 3. SAFE: If both core scanners agree the target is Clean
-        if vt_verdict == "Clean" and wr_verdict == "Clean":
+        # 2. SAFE
+        # "if ((gti_verdict = benign or webrisk = safe) and vt = 0 detection)"
+        wr_is_safe = wr_factors.get("is_clean", False)
+        gti_is_benign = gti_verdict == "VERDICT_HARMLESS" or gti_verdict == "benign"
+        
+        if (gti_is_benign or wr_is_safe) and vt_detections == 0:
             return "SAFE"
 
+        # 3. Falling back to WARNING (Suspicious)
         return "WARNING"
 
     async def scan_url(self, item_value: str, item_type: str = "url", vt_threshold: int = 5) -> Dict:
