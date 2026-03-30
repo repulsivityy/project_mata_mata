@@ -29,6 +29,7 @@ class ScanResponse(BaseModel):
     url: str
     type: str
     results: dict
+    final_verdict: str
 
 @app.on_event("shutdown")
 async def shutdown_event():
