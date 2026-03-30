@@ -47,32 +47,39 @@ export default function MataMataDashboard() {
       </header>
 
       {/* Input Box */}
-      <form onSubmit={handleScan} className="flex gap-4 mb-12 relative z-10 glassmorphism p-2 rounded-2xl">
-        <input 
-          type="text" 
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="Paste external URL to scan..." 
-          className="w-full bg-transparent text-white px-6 py-4 outline-none placeholder:text-gray-500 text-lg"
-          required
-        />
-        <input 
-          type="number" 
-          min="1"
-          max="100"
-          value={threshold}
-          onChange={(e) => setThreshold(e.target.value)}
-          placeholder="Thresh" 
-          className="w-24 bg-transparent text-white px-2 py-4 outline-none placeholder:text-gray-500 text-lg text-center border-l border-white/10"
-          title="VirusTotal Malicious Threshold"
-        />
-        <button 
-          type="submit" 
-          disabled={loading}
-          className="bg-blue-600 hover:bg-blue-500 text-white font-semibold py-4 px-10 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:shadow-[0_0_30px_rgba(37,99,235,0.6)]"
-        >
-          {loading ? 'Scanning...' : 'Analyze Threat'}
-        </button>
+      <form onSubmit={handleScan} className="mb-12 relative z-10 glassmorphism p-4 rounded-2xl flex flex-col gap-4">
+        <div className="flex gap-4">
+          <input 
+            type="text" 
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="Paste external URL to scan..." 
+            className="flex-grow bg-transparent text-white px-4 py-3 outline-none placeholder:text-gray-500 text-lg"
+            required
+          />
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 px-8 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:shadow-[0_0_30px_rgba(37,99,235,0.6)]"
+          >
+            {loading ? 'Scanning...' : 'Analyze Threat'}
+          </button>
+        </div>
+        
+        <div className="flex items-center gap-3 text-sm text-gray-400 px-4 border-t border-white/5 pt-3">
+          <label htmlFor="threshold" className="font-medium text-gray-300">VirusTotal Detection Threshold:</label>
+          <input 
+            id="threshold"
+            type="number" 
+            min="1"
+            max="100"
+            value={threshold}
+            onChange={(e) => setThreshold(e.target.value)}
+            className="w-14 bg-white/5 text-white px-2 py-1 outline-none text-center rounded border border-white/10 focus:border-blue-500/50"
+            title="VirusTotal Malicious Threshold"
+          />
+          <span>(URLs with detections above this number are flagged as Malicious. Default: 5)</span>
+        </div>
       </form>
 
       {/* Loader */}
