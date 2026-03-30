@@ -34,48 +34,60 @@ export default function MataMataDashboard() {
   }
 
   return (
-    <main className="max-w-4xl mx-auto p-8 relative">
+    <main className="w-full max-w-7xl mx-auto p-8 relative flex flex-col items-center">
+      {/* Logo */}
+      <div className="mb-8">
+        <img 
+          src="/project_matamata.jpeg" 
+          alt="Project Mata-Mata Logo" 
+          className="h-48 w-auto border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
+        />
+      </div>
 
-      {/* Header section with glowing threat radar vibe */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[300px] bg-blue-600/20 blur-[120px] rounded-full -z-10 pointer-events-none" />
-      
-      <header className="text-center mb-12 mt-12">
-        <h1 className="text-5xl font-extrabold tracking-tight mb-4 tracking-tighter bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent">
+      <header className="text-center mb-12">
+        <h1 className="text-6xl font-black uppercase tracking-tighter mb-4 text-black">
           Project Mata-Mata
         </h1>
-        <p className="text-gray-400 text-lg">Threat Intelligence & Phishing Analysis</p>
-        <p className="text-gray-400 text-lg">Project Mata-Mata (The Eyes, or more colloquially known as "The Police" in SEA), integrates multi-source intelligence to determine a comprehensive risk assessment for a given URL.</p>
-        <p className="text-gray-400 text-lg">It leverages Google Threat Intelligence, VirusTotal, Web Risk Evaluate, and Multi-Model Gemini Agent to determine a comprehensive risk assessment for a given URL.</p>
-        <div className="mt-6 max-w-xl mx-auto text-left text-sm text-gray-400 space-y-1 bg-white/5 p-4 rounded-xl border border-white/5">
-          <p><strong>Scoring Logic</strong></p>
-          <p>🔴 <strong>DANGER:</strong> Requires both a Core Intel hit (GTI/Web Risk) and a Verification hit (AI High or VT &gt; 5).</p>
-          <p>🟢 <strong>SAFE:</strong> Requires a clean indicator (GTI Benign or Web Risk Safe) and exactly 0 detections.</p>
-          <p>🟡 <strong>WARNING:</strong> The fallback state for any link failing both tests above.</p>
+        <p className="text-xl text-gray-700 font-medium max-w-2xl mx-auto">
+          Consolidates multi-source intelligence (Google Threat Intel, VirusTotal, Web Risk) with Gemini AI for comprehensive URL risk analysis.
+        </p>
+        
+        {/* Scoring Logic Ribbon */}
+        <div className="mt-8 flex flex-wrap justify-center gap-4 text-sm font-bold">
+          <span className="flex items-center gap-2 bg-[#ff007f] text-white px-4 py-2 rounded-none border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            🔴 DANGER: Core + Verification Hit
+          </span>
+          <span className="flex items-center gap-2 bg-[#00ffff] text-black px-4 py-2 rounded-none border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            🟢 SAFE: Clean indicator & 0 Detections
+          </span>
+          <span className="flex items-center gap-2 bg-[#ffff00] text-black px-4 py-2 rounded-none border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            🟡 WARNING: Fallback state
+          </span>
         </div>
       </header>
 
       {/* Input Box */}
-      <form onSubmit={handleScan} className="mb-12 relative z-10 glassmorphism p-4 rounded-2xl flex flex-col gap-4">
+      <form onSubmit={handleScan} className="mb-12 relative z-10 bg-white p-6 rounded-none border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-4 w-full max-w-4xl">
         <div className="flex gap-4">
           <input 
             type="text" 
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="Paste external URL to scan..." 
-            className="flex-grow bg-transparent text-white px-4 py-3 outline-none placeholder:text-gray-500 text-lg"
+            className="flex-grow bg-white text-black px-4 py-3 outline-none placeholder:text-gray-500 text-lg border-2 border-black"
             required
           />
           <button 
             type="submit" 
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 px-8 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:shadow-[0_0_30px_rgba(37,99,235,0.6)]"
+            className="bg-[#00ffff] hover:bg-[#00dada] text-black font-black py-3 px-8 border-2 border-black transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
           >
             {loading ? 'Scanning...' : 'Analyze Threat'}
           </button>
         </div>
         
-        <div className="flex items-center gap-3 text-sm text-gray-400 px-4 border-t border-white/5 pt-3">
-          <label htmlFor="threshold" className="font-medium text-gray-300">VirusTotal Detection Threshold:</label>
+        <div className="flex items-center gap-3 text-sm text-black px-4 pt-3">
+          <label htmlFor="threshold" className="font-bold">VirusTotal Detection Threshold:</label>
           <input 
             id="threshold"
             type="number" 
@@ -83,106 +95,98 @@ export default function MataMataDashboard() {
             max="100"
             value={threshold}
             onChange={(e) => setThreshold(e.target.value)}
-            className="w-14 bg-white/5 text-white px-2 py-1 outline-none text-center rounded border border-white/10 focus:border-blue-500/50"
+            className="w-14 bg-white text-black px-2 py-1 outline-none text-center border-2 border-black font-bold"
             title="VirusTotal Malicious Threshold"
           />
-          <span>(URLs with detections above this number are flagged as Malicious. Default: 5)</span>
+          <span className="font-medium">(URLs with detections above this number are flagged as Malicious. Default: 5)</span>
         </div>
       </form>
 
       {/* Loader */}
       {loading && (
-        <div className="flex flex-col items-center justify-center py-20 animate-pulse">
-           <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mb-6"></div>
-           <p className="text-blue-400 animate-pulse font-mono tracking-widest text-sm text-center">
+        <div className="flex flex-col items-center justify-center py-20 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] w-full max-max-w-4xl">
+           <div className="w-16 h-16 border-4 border-black border-t-[#00ffff] rounded-none animate-spin mb-6"></div>
+           <p className="text-black font-black tracking-widest text-sm text-center">
             [1] VALIDATING AGAINST THREAT INTEL...<br />
             [2] DISPATCHING BROWSER INSTANCES...<br />
             [3] RETRIEVING DOM & NETWORK TELEMETRY...<br />
             [4] INITIALIZING GEMINI VISION DETECTORS...<br />
-             This will take ~30 seconds.
+              This will take ~30 seconds.
            </p>
         </div>
       )}
 
       {/* Error State */}
       {error && (
-        <div className="glassmorphism p-6 rounded-2xl border-red-500/30 bg-red-500/10 mb-8">
-          <p className="text-red-400 font-mono tracking-wide">❌ FATAL ERROR: {error}</p>
+        <div className="p-6 bg-[#ff007f] text-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] mb-8 w-full max-w-4xl">
+          <p className="font-black font-mono tracking-wide">❌ FATAL ERROR: {error}</p>
         </div>
       )}
 
       {/* Results State */}
       {result && (
-        <div className="space-y-6 animate-in slide-in-from-bottom-8 fade-in duration-700">
+        <div className="space-y-6 w-full max-w-4xl">
           
           {/* Global Final Verdict Banner */}
-          <div className={`p-6 rounded-2xl border flex items-center justify-between glassmorphism ${
-            result.final_verdict === "DANGER" ? "border-red-500/50 bg-red-500/10" :
-            result.final_verdict === "SAFE" ? "border-emerald-500/30 bg-emerald-500/10" :
-            "border-yellow-500/30 bg-yellow-500/10"
+          <div className={`p-6 border-4 border-black flex items-center justify-between shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] ${
+            result.final_verdict === "DANGER" ? "bg-[#ff007f] text-white" :
+            result.final_verdict === "SAFE" ? "bg-[#00ffff] text-black" :
+            "bg-[#ffff00] text-black"
           }`}>
             <div>
-              <p className="text-gray-400 text-xs mb-1 uppercase tracking-widest font-bold">Final Verdict</p>
-              <h2 className={`text-3xl font-bold tracking-wider ${
-                result.final_verdict === "DANGER" ? "text-red-400" :
-                result.final_verdict === "SAFE" ? "text-emerald-400" :
-                "text-yellow-400"
-              }`}>
+              <p className="text-xs mb-1 uppercase tracking-widest font-black">Final Verdict</p>
+              <h2 className="text-3xl font-black tracking-wider">
                 {result.final_verdict === "DANGER" ? "KNOWN BAD / DANGEROUS" : 
                  result.final_verdict === "SAFE" ? "KNOWN GOOD / SAFE" : 
                  "CAUTION / WARNING"}
               </h2>
-              <p className="text-gray-400 text-xs mt-1">Aggregated scoring from all intelligence sources.</p>
+              <p className="text-xs mt-1">Aggregated scoring from all intelligence sources.</p>
             </div>
-            <div className={`text-4xl ${
-              result.final_verdict === "DANGER" ? "text-red-500" :
-              result.final_verdict === "SAFE" ? "text-emerald-500" :
-              "text-yellow-500"
-            }`}>
+            <div className="text-4xl font-black">
               {result.final_verdict === "DANGER" ? "💀" : result.final_verdict === "SAFE" ? "✅" : "⚠️"}
             </div>
           </div>
 
-          <div className="flex justify-between items-center glassmorphism p-6 rounded-2xl">
+          <div className="flex justify-between items-center bg-white p-6 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
             <div>
-              <p className="text-gray-400 text-sm mb-1 uppercase tracking-widest font-bold">Target Evaluated</p>
-              <h2 className="text-2xl font-mono text-blue-300 break-all">{result.url}</h2>
+              <p className="text-gray-500 text-sm mb-1 uppercase tracking-widest font-bold">Target Evaluated</p>
+              <h2 className="text-2xl font-mono text-black break-all font-bold">{result.url}</h2>
             </div>
             <div className="text-right">
-              <p className="text-gray-400 text-sm mb-1 uppercase tracking-widest font-bold">Type</p>
-              <h2 className="text-xl font-mono text-white">{result.type}</h2>
+              <p className="text-gray-500 text-sm mb-1 uppercase tracking-widest font-bold">Type</p>
+              <h2 className="text-xl font-mono text-black font-bold">{result.type}</h2>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
             {Object.entries(result.results || {}).map(([checker, data]: [string, any]) => (
-              <div key={checker} className={`glassmorphism p-6 rounded-2xl border ${
-                data.error ? 'border-yellow-500/30' : 
-                data.risk_factors?.verdict === 'Malicious' ? 'border-red-500/50 bg-red-500/5' : 
-                data.risk_factors?.verdict === 'Suspicious' ? 'border-yellow-500/30 bg-yellow-500/5' :
-                'border-emerald-500/30 bg-emerald-500/5'
+              <div key={checker} className={`bg-white p-6 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] ${
+                data.error ? 'border-[#ffff00]' : 
+                data.risk_factors?.verdict === 'Malicious' ? 'bg-[#ff007f]/10' : 
+                data.risk_factors?.verdict === 'Suspicious' ? 'bg-[#ffff00]/10' :
+                'bg-[#00ffff]/10'
               }`}>
                 <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">{checker === "Google Web Risk" ? "Google Web Risk Eval" : checker}</h3>
+                  <h3 className="text-xl font-bold text-black">{checker === "Google Web Risk" ? "Google Web Risk Eval" : checker}</h3>
                   {data.error ? (
-                    <span className="px-3 py-1 text-xs font-bold rounded-full tracking-widest uppercase bg-yellow-500/20 text-yellow-300">
+                    <span className="px-3 py-1 text-xs font-bold bg-[#ffff00] text-black border-2 border-black">
                       Error
                     </span>
                   ) : (
                     <>
                       {/* Normal cards show verdict if available */}
                       {checker !== "VirusTotal" ? (
-                        <span className={`px-3 py-1 text-xs font-bold rounded-full tracking-widest uppercase
-                          ${data.risk_factors?.verdict === 'Malicious' ? 'bg-red-500/20 text-red-400 border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.3)]' :
-                            data.risk_factors?.verdict === 'Suspicious' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' :
-                            'bg-emerald-500/20 text-emerald-400'}
+                        <span className={`px-3 py-1 text-xs font-bold border-2 border-black
+                          ${data.risk_factors?.verdict === 'Malicious' ? 'bg-[#ff007f] text-white' :
+                            data.risk_factors?.verdict === 'Suspicious' ? 'bg-[#ffff00] text-black' :
+                            'bg-[#00ffff] text-black'}
                         `}>
                           {data.risk_factors?.verdict || (data.is_malicious ? 'Malicious' : 'Clean')}
                         </span>
                       ) : (
                         /* VirusTotal ONLY shows chip if it is Malicious */
                         data.risk_factors?.verdict === 'Malicious' && (
-                          <span className="px-3 py-1 text-xs font-bold rounded-full tracking-widest uppercase bg-red-500/20 text-red-400 border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.3)]">
+                          <span className="px-3 py-1 text-xs font-bold bg-[#ff007f] text-white border-2 border-black">
                             Malicious
                           </span>
                         )
@@ -191,12 +195,12 @@ export default function MataMataDashboard() {
                   )}
                 </div>
                 
-                <p className="text-gray-300 font-medium mb-4">{data.summary}</p>
+                <p className="text-black font-medium mb-4">{data.summary}</p>
                 
                 {data.details?.full_analysis && (
-                  <div className="mt-4 p-4 bg-black/40 rounded-xl overflow-x-auto border border-white/5">
-                    <p className="text-xs text-gray-500 uppercase tracking-widest mb-2 font-bold">AI Detailed Diagnosis</p>
-                    <pre className="text-sm text-gray-300 font-mono whitespace-pre-wrap">{data.details.full_analysis}</pre>
+                  <div className="mt-4 p-4 bg-black text-white overflow-x-auto border-2 border-black">
+                    <p className="text-xs text-gray-400 uppercase tracking-widest mb-2 font-bold">AI Detailed Diagnosis</p>
+                    <pre className="text-sm font-mono whitespace-pre-wrap">{data.details.full_analysis}</pre>
                   </div>
                 )}
               </div>
@@ -204,14 +208,14 @@ export default function MataMataDashboard() {
 
             {/* Dedicated card for GTI Verdict moved from mockup flow */}
             {result.results?.["VirusTotal"]?.risk_factors?.gti_verdict && (
-              <div className="glassmorphism p-6 rounded-2xl border border-blue-500/30 bg-blue-500/5">
+              <div className="bg-white p-6 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
                 <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">GTI Assessment</h3>
-                  <span className="px-3 py-1 text-xs font-bold rounded-full tracking-widest uppercase bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                  <h3 className="text-xl font-bold text-black">GTI Assessment</h3>
+                  <span className="px-3 py-1 text-xs font-bold border-2 border-black bg-[#00ffff] text-black">
                     {result.results["VirusTotal"].risk_factors.gti_verdict}
                   </span>
                 </div>
-                <p className="text-gray-400 text-sm">
+                <p className="text-black text-sm">
                   {result.results["VirusTotal"].details?.description || "Google Threat Intelligence verdict extracted from VirusTotal response."}
                 </p>
               </div>
