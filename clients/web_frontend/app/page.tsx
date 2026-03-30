@@ -89,6 +89,34 @@ export default function MataMataDashboard() {
       {result && (
         <div className="space-y-6 animate-in slide-in-from-bottom-8 fade-in duration-700">
           
+          {/* Global Final Verdict Banner */}
+          <div className={`p-6 rounded-2xl border flex items-center justify-between glassmorphism ${
+            result.final_verdict === "DANGER" ? "border-red-500/50 bg-red-500/10" :
+            result.final_verdict === "SAFE" ? "border-emerald-500/30 bg-emerald-500/10" :
+            "border-yellow-500/30 bg-yellow-500/10"
+          }`}>
+            <div>
+              <p className="text-gray-400 text-xs mb-1 uppercase tracking-widest font-bold">Final Verdict</p>
+              <h2 className={`text-3xl font-bold tracking-wider ${
+                result.final_verdict === "DANGER" ? "text-red-400" :
+                result.final_verdict === "SAFE" ? "text-emerald-400" :
+                "text-yellow-400"
+              }`}>
+                {result.final_verdict === "DANGER" ? "KNOWN BAD / DANGEROUS" : 
+                 result.final_verdict === "SAFE" ? "KNOWN GOOD / SAFE" : 
+                 "CAUTION / WARNING"}
+              </h2>
+              <p className="text-gray-400 text-xs mt-1">Aggregated scoring from all intelligence sources.</p>
+            </div>
+            <div className={`text-4xl ${
+              result.final_verdict === "DANGER" ? "text-red-500" :
+              result.final_verdict === "SAFE" ? "text-emerald-500" :
+              "text-yellow-500"
+            }`}>
+              {result.final_verdict === "DANGER" ? "💀" : result.final_verdict === "SAFE" ? "✅" : "⚠️"}
+            </div>
+          </div>
+
           <div className="flex justify-between items-center glassmorphism p-6 rounded-2xl">
             <div>
               <p className="text-gray-400 text-sm mb-1 uppercase tracking-widest font-bold">Target Evaluated</p>

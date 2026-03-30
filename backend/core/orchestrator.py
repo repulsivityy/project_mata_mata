@@ -36,6 +36,48 @@ class ScanOrchestrator:
             if self._session and not self._session.closed:
                 await self._session.close()
 
+    def _compute_final_verdict(self, results_map: Dict) -> str:
+        """
+        Unified scoring rule logic to compute "DANGER", "SAFE", or "WARNING" across scanners.
+        """
+        vt = results_map.get("VirusTotal", {})
+        wr = results_map.get("Google Web Risk", {})
+        ai = results_map.get("AI Analysis", {})
+
+        # --- 1. DANGER Rules ---
+        # GTI Verdict is MALICIOUS
+        gti_verdict = vt.get("risk_factors", {}).get("gti_verdict")
+        gti_score = vt.get("risk_factors", {}).get("gti_score")
+        if gti_verdict == "VERDICT_MALICIOUS" or (gti_score is not None and gti_score > 60):
+            return "DANGER"
+
+        # Web Risk has HIGH/EXTREMELY_HIGH
+        if wr.get("risk_factors", {}).get("has_high_threat"):
+            return "DANGER"
+
+        # VT Classic Vendors Count >= 5
+        if vt.get("is_malicious"): # Already decoupled to represent classic only
+            return "DANGER"
+
+        # Gemini AI Analysis is HIGH
+        if ai.get("risk_factors", {}).get("ai_risk") == "high":
+            return "DANGER"
+
+        # --- 2. SAFE Rules ---
+        # GTI Verdict is VERDICT_BENIGN
+        if gti_verdict == "VERDICT_BENIGN":
+            return "SAFE"
+
+        # VT Vendors Count == 0 AND Web Risk is subset of SAFE
+        vt_stats = vt.get("details", {})
+        vt_count = vt_stats.get("malicious", 0) + vt_stats.get("suspicious", 0) if isinstance(vt_stats, dict) else 1 # Default to 1 if not dict (error)
+        wr_is_safe = not wr.get("is_malicious", False)
+        
+        if vt_count == 0 and wr_is_safe:
+            return "SAFE"
+
+        return "WARNING"
+
     async def scan_url(self, item_value: str, item_type: str = "url") -> Dict:
         """
         Runs the full scan pipeline and returns a dictionary.
@@ -108,7 +150,8 @@ class ScanOrchestrator:
             return {
                 "url": item_value,
                 "type": item_type,
-                "results": results_map
+                "results": results_map,
+                "final_verdict": self._compute_final_verdict(results_map)
             }
 
         except Exception as e:

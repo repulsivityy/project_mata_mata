@@ -111,11 +111,13 @@ class VirusTotalChecker(BaseChecker):
         # Check for GTI assessment
         gti_assessment = attributes.get("gti_assessment")
         if gti_assessment:
-            if DEBUG_MODE:
-                logger.info(f"🔍 VT GTI Assessment found: {gti_assessment}")
+            is_malicious = risk_factors["is_malicious_threshold"]
             gti_verdict = gti_assessment.get("verdict", {}).get("value")
             gti_score = gti_assessment.get("threat_score", {}).get("value")
-            is_malicious = gti_verdict == "VERDICT_MALICIOUS"
+            
+            if DEBUG_MODE:
+                logger.info(f"🔍 VT GTI Assessment found: {gti_assessment}")
+                
             details.update(gti_assessment)
             risk_factors.update({
                 "gti_verdict": gti_verdict,
