@@ -67,7 +67,7 @@ export default function MataMataDashboard() {
       </header>
 
       {/* Input Box */}
-      <form onSubmit={handleScan} className="mb-12 relative z-10 bg-white p-6 rounded-none border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-4 w-full max-w-4xl">
+      <form onSubmit={handleScan} className="mb-12 relative z-10 bg-white p-6 rounded-none border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-4 w-full max-w-6xl">
         <div className="flex gap-4">
           <input 
             type="text" 
@@ -104,7 +104,7 @@ export default function MataMataDashboard() {
 
       {/* Loader */}
       {loading && (
-        <div className="flex flex-col items-center justify-center py-20 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] w-full max-max-w-4xl">
+        <div className="flex flex-col items-center justify-center py-20 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] w-full max-w-6xl">
            <div className="w-16 h-16 border-4 border-black border-t-[#00ffff] rounded-none animate-spin mb-6"></div>
            <p className="text-black font-black tracking-widest text-sm text-center">
             [1] VALIDATING AGAINST THREAT INTEL...<br />
@@ -118,14 +118,14 @@ export default function MataMataDashboard() {
 
       {/* Error State */}
       {error && (
-        <div className="p-6 bg-[#ff007f] text-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] mb-8 w-full max-w-4xl">
+        <div className="p-6 bg-[#ff007f] text-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] mb-8 w-full max-w-6xl">
           <p className="font-black font-mono tracking-wide">❌ FATAL ERROR: {error}</p>
         </div>
       )}
 
       {/* Results State */}
       {result && (
-        <div className="space-y-6 w-full max-w-4xl">
+        <div className="space-y-6 w-full max-w-6xl">
           
           {/* Global Final Verdict Banner */}
           <div className={`p-6 border-4 border-black flex items-center justify-between shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] ${
@@ -198,10 +198,15 @@ export default function MataMataDashboard() {
                 <p className="text-black font-medium mb-4">{data.summary}</p>
                 
                 {data.details?.full_analysis && (
-                  <div className="mt-4 p-4 bg-black text-white overflow-x-auto border-2 border-black">
-                    <p className="text-xs text-gray-400 uppercase tracking-widest mb-2 font-bold">AI Detailed Diagnosis</p>
-                    <pre className="text-sm font-mono whitespace-pre-wrap">{data.details.full_analysis}</pre>
-                  </div>
+                  <details className="mt-4 border-2 border-black bg-black text-white group cursor-pointer">
+                    <summary className="p-3 text-xs text-gray-400 uppercase tracking-widest font-black flex justify-between items-center group-open:border-b-2 border-black">
+                      AI Detailed Diagnosis
+                      <span className="group-open:rotate-180 transform transition-transform">▼</span>
+                    </summary>
+                    <div className="p-3 bg-black">
+                      <pre className="text-sm font-mono whitespace-pre-wrap">{data.details.full_analysis}</pre>
+                    </div>
+                  </details>
                 )}
               </div>
             ))}
