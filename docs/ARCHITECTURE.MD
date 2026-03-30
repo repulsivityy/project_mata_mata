@@ -88,6 +88,19 @@ graph TD
 
 ---
 
+## ⚖️ Scoring Logic & Final Verdict
+
+The `Orchestrator` computes a unified final verdict (`DANGER`, `WARNING`, `SAFE`) based on a compound priority logic that requires corroboration for high-severity flags:
+
+- **🔴 DANGER**: Requires at least one **Core Intel** indicator AND at least one **Verification** indicator to be true.
+  - *Core Intel*: Google TI (`gti_score > 60` or `gti_verdict` is malicious) OR Web Risk flags it as malicious.
+  - *Verification*: AI Analysis identifies it as high risk OR VirusTotal detections breach the threshold (`> 5`).
+- **🟢 SAFE**: Requires a clean indicator AND no active community detections.
+  - *Conditions*: (`gti_verdict` is benign OR Web Risk module flags it as safe) **AND** VirusTotal must have exactly `0` detections.
+- **🟡 WARNING**: The fallback state for any link failing both tests above. It implies that at least one engine raised a suspicion but it lacked sufficient corroboration to be marked as `DANGER`.
+
+---
+
 ## 🛰️ Lifecycle Sequences 
 
 > [!NOTE]

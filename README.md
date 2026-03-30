@@ -23,6 +23,13 @@ project_mata_mata/
 - **Google Web Risk**: Evaluates domains against global blacklists.
 - **Gemini 2.5 Multi-Modal Agent**: Renders Chromium headless instances behind Cloudflare shields to analyze visual DOM spoofing, inline hidden scripts, and exfiltrated background network POSTs.
 
+## ⚖️ Final Verdict Scoring
+
+The engine uses a compound priority logic that requires corroboration for high-severity flags:
+- **🔴 DANGER**: Requires both a Core Intel hit (GTI/Web Risk) **AND** a Verification hit (AI High or VT detections > 5).
+- **🟢 SAFE**: Requires a clean indicator (GTI Benign or Web Risk Safe) **AND** exactly `0` detections.
+- **🟡 WARNING**: The fallback state for any link failing both tests above.
+
 ## How To Run Locally (Docker)
 
 To test Project Mata-Mata on any local VM, simply populate your private API keys in a `.env` file at the root:
