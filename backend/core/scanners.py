@@ -125,9 +125,20 @@ class VirusTotalChecker(BaseChecker):
                 "gti_score": gti_score
             })
         else:
+            gti_verdict = None
             if DEBUG_MODE:
                 logger.info(f"🔍 VT No GTI assessment found")
-            is_malicious = risk_factors["is_malicious_threshold"]
+        
+        # Calculate standardized verdict
+        if gti_verdict == "VERDICT_MALICIOUS" or risk_factors["is_malicious_threshold"]:
+            verdict = "Malicious"
+        elif malicious_count == 0 and gti_verdict == "VERDICT_BENIGN":
+            verdict = "Clean"
+        else:
+            verdict = "Suspicious"
+            
+        risk_factors["verdict"] = verdict
+        is_malicious = verdict == "Malicious"
         
         return ScanResult(is_malicious, summary, self.SOURCE_NAME, details=details, risk_factors=risk_factors, is_pending=False)
 
@@ -295,13 +306,29 @@ class WebRiskChecker(BaseChecker):
         super().__init__(session)
         self.api_key = api_key
 
-    def _parse_results(self, wr_data: Dict) -> ScanResult:
         if not wr_data or "scores" not in wr_data: 
             return ScanResult(False, "No detections", self.SOURCE_NAME)
-        is_malicious = any(score.get("confidenceLevel") != "SAFE" for score in wr_data.get("scores", []))
+        
         threat_scores = {score.get("threatType"): score.get("confidenceLevel", "SAFE") for score in wr_data.get("scores", [])}
         summary = self._format_threat_summary(threat_scores)
-        risk_factors = {"has_high_threat": any(c in ["HIGH", "EXTREMELY_HIGH"] for c in threat_scores.values()), "is_clean": not is_malicious}
+        
+        has_high_threat = any(c in ["HIGH", "EXTREMELY_HIGH"] for c in threat_scores.values())
+        is_safe = all(c == "SAFE" for c in threat_scores.values())
+        
+        if is_safe:
+            verdict = "Clean"
+        elif has_high_threat:
+            verdict = "Malicious"
+        else:
+            verdict = "Suspicious"
+            
+        risk_factors = {
+            "verdict": verdict,
+            "has_high_threat": has_high_threat,
+            "is_clean": is_safe
+        }
+        is_malicious = verdict == "Malicious"
+        
         return ScanResult(is_malicious, summary, self.SOURCE_NAME, details=threat_scores, risk_factors=risk_factors)
 
     def _format_threat_summary(self, threat_scores: Dict) -> str:
@@ -352,14 +379,22 @@ class AIImageChecker(BaseChecker):
                 ai_data = json.loads(json_match.group(0))
                 risk_level = ai_data.get("risk_level", "UNKNOWN").lower()
                 reason = ai_data.get("final_assessment_summary", "No summary provided.")
-                is_malicious = risk_level == "high"
+                
+                if risk_level == "high":
+                    verdict = "Malicious"
+                elif risk_level == "medium":
+                    verdict = "Suspicious"
+                else:
+                    verdict = "Clean"
+                    
+                is_malicious = verdict == "Malicious"
                 
                 # Truncate long reasons for cleaner display in telegram
                 if len(reason) > 450:
                     reason = reason[:450] + "..."
                 
                 summary = f"Risk: {risk_level.capitalize()} - {reason}"
-                risk_factors = {"ai_risk": risk_level}
+                risk_factors = {"ai_risk": risk_level, "verdict": verdict}
                 return ScanResult(is_malicious, summary, self.SOURCE_NAME, details=details, risk_factors=risk_factors)
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse JSON from AI response: {e}")

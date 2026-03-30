@@ -44,36 +44,22 @@ class ScanOrchestrator:
         wr = results_map.get("Google Web Risk", {})
         ai = results_map.get("AI Analysis", {})
 
-        # --- 1. DANGER Rules ---
-        # GTI Verdict is MALICIOUS
-        gti_verdict = vt.get("risk_factors", {}).get("gti_verdict")
-        gti_score = vt.get("risk_factors", {}).get("gti_score")
-        if gti_verdict == "VERDICT_MALICIOUS" or (gti_score is not None and gti_score > 60):
+        # Extract verdicts
+        vt_verdict = vt.get("risk_factors", {}).get("verdict")
+        wr_verdict = wr.get("risk_factors", {}).get("verdict")
+        ai_verdict = ai.get("risk_factors", {}).get("verdict")
+
+        # 1. DANGER: If any backend scanner returns a Malicious verdict
+        if vt_verdict == "Malicious" or wr_verdict == "Malicious" or ai_verdict == "Malicious":
             return "DANGER"
 
-        # Web Risk has HIGH/EXTREMELY_HIGH
-        if wr.get("risk_factors", {}).get("has_high_threat"):
-            return "DANGER"
+        # 2. WARNING: If any of the core intelligence scanners returns Suspicious
+        # Note: We ignore AI here as it should not influence WARNING/SAFE state.
+        if vt_verdict == "Suspicious" or wr_verdict == "Suspicious":
+            return "WARNING"
 
-        # VT Classic Vendors Count >= 5
-        if vt.get("is_malicious"): # Already decoupled to represent classic only
-            return "DANGER"
-
-        # Gemini AI Analysis is HIGH
-        if ai.get("risk_factors", {}).get("ai_risk") == "high":
-            return "DANGER"
-
-        # --- 2. SAFE Rules ---
-        # GTI Verdict is VERDICT_BENIGN
-        if gti_verdict == "VERDICT_BENIGN":
-            return "SAFE"
-
-        # VT Vendors Count == 0 AND Web Risk is subset of SAFE
-        vt_stats = vt.get("details", {})
-        vt_count = vt_stats.get("malicious", 0) + vt_stats.get("suspicious", 0) if isinstance(vt_stats, dict) else 1 # Default to 1 if not dict (error)
-        wr_is_safe = not wr.get("is_malicious", False)
-        
-        if vt_count == 0 and wr_is_safe:
+        # 3. SAFE: If both core scanners agree the target is Clean
+        if vt_verdict == "Clean" and wr_verdict == "Clean":
             return "SAFE"
 
         return "WARNING"
