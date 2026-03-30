@@ -27,6 +27,12 @@ resource "google_secret_manager_secret" "telegram_token" {
     auto {}
   }
 }
+resource "google_secret_manager_secret" "mata_api_key" {
+  secret_id = "MATA_API_KEY"
+  replication {
+    auto {}
+  }
+}
 
 # The default Compute Engine service account used by Cloud Run
 locals {

@@ -48,6 +48,10 @@ resource "google_cloud_run_v2_service" "backend" {
           }
         }
       }
+      env {
+        name  = "PROJECT_ID"
+        value = var.project_id
+      }
     }
   }
 
@@ -71,6 +75,15 @@ resource "google_cloud_run_v2_service" "frontend" {
       env {
         name  = "NEXT_PUBLIC_API_URL"
         value = "${google_cloud_run_v2_service.backend.uri}/api/v1/scan"
+      }
+      env {
+        name = "MATA_API_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.mata_api_key.secret_id
+            version = "latest"
+          }
+        }
       }
     }
   }
@@ -110,10 +123,6 @@ resource "google_cloud_run_v2_service" "bot" {
         name  = "DEBUG_MODE"
         value = "true"
       }
-    }
-    # Keep CPU always active for polling scripts
-    vpc_access {
-      # this block exists to remind that we could add VPC. But for polling:
     }
   }
 
