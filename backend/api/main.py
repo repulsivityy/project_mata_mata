@@ -70,6 +70,7 @@ firestore_client = firestore.AsyncClient()
 class ScanRequest(BaseModel):
     url: str
     vt_threshold: int = 5
+    allow_early_cancel: bool = False
 
 class ScanResponse(BaseModel):
     url: str
@@ -86,7 +87,7 @@ async def shutdown_event():
     logger.info("Closing orchestrator sessions...")
     await orchestrator.close()
 
-async def perform_scan(job_id: str, url: str, item_type: str, vt_threshold: int):
+async def perform_scan(job_id: str, url: str, item_type: str, vt_threshold: int, allow_early_cancel: bool = False):
     doc_ref = firestore_client.collection("mata_mata_scans").document(job_id)
     try:
         logger.info(f"Starting background scan for job {job_id}")
@@ -118,7 +119,7 @@ async def perform_scan(job_id: str, url: str, item_type: str, vt_threshold: int)
             logger.info(f"Job {job_id} updated with partial results.")
 
         # 3. Run the scan with callback
-        report = await orchestrator.scan_url(url, item_type, vt_threshold=vt_threshold, on_update_callback=on_update)
+        report = await orchestrator.scan_url(url, item_type, vt_threshold=vt_threshold, allow_early_cancel=allow_early_cancel, on_update_callback=on_update)
         
         # 4. Save final completed state
         await doc_ref.update({
@@ -172,7 +173,7 @@ async def scan_url(request: ScanRequest, background_tasks: BackgroundTasks):
     })
     
     # Add background task
-    background_tasks.add_task(perform_scan, job_id, url_value, target["type"], request.vt_threshold)
+    background_tasks.add_task(perform_scan, job_id, url_value, target["type"], request.vt_threshold, request.allow_early_cancel)
     
     return ScanJobResponse(job_id=job_id, status="in_progress")
 

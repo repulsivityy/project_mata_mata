@@ -152,7 +152,7 @@ class TelegramBot:
         try:
             async with aiohttp.ClientSession() as session:
                 # 1. Submit the scan request
-                async with session.post(API_BACKEND_URL, json={"url": text}, headers=headers) as resp:
+                async with session.post(API_BACKEND_URL, json={"url": text, "allow_early_cancel": True}, headers=headers) as resp:
                     if resp.status != 200:
                         error_msg = await resp.text()
                         await proc_msg.edit_text(f"❌ <b>API Error {resp.status}</b>: {error_msg}", parse_mode='HTML')

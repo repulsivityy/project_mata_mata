@@ -83,7 +83,7 @@ class ScanOrchestrator:
         logger.info("⚖️ Verdict: Falling back to WARNING")
         return "WARNING"
 
-    async def scan_url(self, item_value: str, item_type: str = "url", vt_threshold: int = 5, on_update_callback=None) -> Dict:
+    async def scan_url(self, item_value: str, item_type: str = "url", vt_threshold: int = 5, allow_early_cancel: bool = False, on_update_callback=None) -> Dict:
         """
         Runs the full scan pipeline and returns a dictionary.
         """
@@ -168,8 +168,9 @@ class ScanOrchestrator:
                         }
 
                 # Check for Web Risk early exit condition
-                wr_result = results_map.get(WebRiskChecker.SOURCE_NAME)
-                if wr_result and wr_result.get("risk_factors", {}).get("has_high_threat"):
+                if allow_early_cancel:
+                    wr_result = results_map.get(WebRiskChecker.SOURCE_NAME)
+                    if wr_result and wr_result.get("risk_factors", {}).get("has_high_threat"):
                     logger.warning(f"High-confidence threat from Web Risk for {item_value}. Cancelling remaining tasks.")
                     for p_task in pending_tasks:
                         p_task.cancel()
