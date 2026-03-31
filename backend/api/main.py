@@ -87,32 +87,54 @@ async def shutdown_event():
     await orchestrator.close()
 
 async def perform_scan(job_id: str, url: str, item_type: str, vt_threshold: int):
+    doc_ref = firestore_client.collection("mata_mata_scans").document(job_id)
     try:
         logger.info(f"Starting background scan for job {job_id}")
-        report = await orchestrator.scan_url(url, item_type, vt_threshold=vt_threshold)
         
-        # Add TTL field: expire in 48 hours
+        # 1. Initialize Firestore document with defaults
         expire_at = datetime.utcnow() + timedelta(hours=48)
-        
-        # Save to Firestore
-        doc_ref = firestore_client.collection("mata_mata_scans").document(job_id)
         await doc_ref.set({
-            "status": "completed",
-            "results": report.get("results", {}),
-            "final_verdict": report.get("final_verdict", "UNKNOWN"),
+            "status": "in_progress",
+            "results": {
+                "VirusTotal": {"summary": "Still analyzing...", "is_pending": True, "error": False},
+                "Google Web Risk": {"summary": "Still analyzing...", "is_pending": True, "error": False},
+                "AI Analysis": {"summary": "Still analyzing...", "is_pending": True, "error": False}
+            },
             "url": url,
             "type": item_type,
             "expireAt": expire_at
         })
+        
+        # 2. Define callback to update Firestore live
+        async def on_update(current_results):
+            # Merge with defaults to preserve "Still analyzing..." for pending ones
+            merged_results = {
+                "VirusTotal": {"summary": "Still analyzing...", "is_pending": True, "error": False},
+                "Google Web Risk": {"summary": "Still analyzing...", "is_pending": True, "error": False},
+                "AI Analysis": {"summary": "Still analyzing...", "is_pending": True, "error": False}
+            }
+            merged_results.update(current_results)
+            await doc_ref.update({"results": merged_results})
+            logger.info(f"Job {job_id} updated with partial results.")
+
+        # 3. Run the scan with callback
+        report = await orchestrator.scan_url(url, item_type, vt_threshold=vt_threshold, on_update_callback=on_update)
+        
+        # 4. Save final completed state
+        await doc_ref.update({
+            "status": "completed",
+            "results": report.get("results", {}),
+            "final_verdict": report.get("final_verdict", "UNKNOWN")
+        })
         logger.info(f"Job {job_id} completed and saved to Firestore.")
+        
     except Exception as e:
         logger.error(f"Background scan failed for job {job_id}: {e}")
-        doc_ref = firestore_client.collection("mata_mata_scans").document(job_id)
         await doc_ref.set({
             "status": "failed",
             "error": str(e),
-            "expireAt": datetime.utcnow() + timedelta(hours=1) # Expire failed jobs faster!
-        })
+            "expireAt": datetime.utcnow() + timedelta(hours=1)
+        }, merge=True)
 
 @app.post("/api/v1/scan", response_model=ScanJobResponse, dependencies=[Depends(verify_api_key)])
 async def scan_url(request: ScanRequest, background_tasks: BackgroundTasks):

@@ -35,16 +35,15 @@ logger = logging.getLogger(__name__)
 
 class ResponseFormatter:
     RESPONSE_TEMPLATES = {
-        "DANGER":  {"emoji": "🚨", "level": "DANGER: Malicious link detected!",  "rec": "🚫 DO NOT VISIT - This website poses a significant security risk."},
-        "WARNING": {"emoji": "⚠️", "level": "WARNING: Potentially malicious link detected!", "rec": "⚠️ SUSPICIOUS - Proceed with caution and only if you trust the sender."},
-        "SAFE":    {"emoji": "✅", "level": "Link seems safe",    "rec": "✅ SAFE - No threats detected, but always be cautious with unknown websites."},
-        "ERROR":   {"emoji": "❓", "level": "ERROR",   "rec": "❓ INCONCLUSIVE - Exercise caution as threat assessment is unclear."}
+        "DANGER":     {"emoji": "🚨", "level": "DANGER: Malicious link detected!",  "rec": "🚫 DO NOT VISIT - This website poses a significant security risk."},
+        "WARNING":    {"emoji": "⚠️", "level": "WARNING: Potentially malicious link detected!", "rec": "⚠️ SUSPICIOUS - Proceed with caution and only if you trust the sender."},
+        "SAFE":       {"emoji": "✅", "level": "Link seems safe",    "rec": "✅ SAFE - No threats detected, but always be cautious with unknown websites."},
+        "PROCESSING": {"emoji": "⏳", "level": "Analysis in Progress...", "rec": "⏳ WAITING - Results are appearing live as engines complete."},
+        "ERROR":      {"emoji": "❓", "level": "ERROR",   "rec": "❓ INCONCLUSIVE - Exercise caution as threat assessment is unclear."}
     }
 
     def _get_risk_level(self, vt_result: dict, wr_result: dict, ai_result: dict) -> str:
-        if vt_result.get("error") or wr_result.get("error"):
-            return "ERROR"
-        
+        # 1. Critical DANGER check first
         vt_factors = vt_result.get("risk_factors", {})
         wr_factors = wr_result.get("risk_factors", {})
         ai_factors = ai_result.get("risk_factors", {})
@@ -55,6 +54,15 @@ class ResponseFormatter:
             ai_factors.get("ai_risk") == "high"):
             return "DANGER"
 
+        # 2. Check if still processing
+        if vt_result.get("is_pending") or wr_result.get("is_pending") or ai_result.get("is_pending"):
+            return "PROCESSING"
+
+        # 3. Check for errors
+        if vt_result.get("error") or wr_result.get("error"):
+            return "ERROR"
+
+        # 4. Success/Safe check
         if (vt_factors.get("gti_verdict") == "VERDICT_HARMLESS" or 
             (vt_factors.get("classic_score") == 0 and wr_factors.get("is_clean"))):
             return "SAFE"
@@ -116,7 +124,7 @@ class TelegramBot:
         if not update.message or not update.message.text: return
         text = update.message.text
         
-        proc_msg = await update.message.reply_html(f"🔍 Sending `{text}` to the Mata-Mata backend...")
+        proc_msg = await update.message.reply_html(f"🔍 Sending `{text}` to the Mata-Mata Analysis Engine...")
         
         if not MATA_API_KEY:
             await proc_msg.edit_text("❌ <b>Error</b>: MATA_API_KEY is not configured.", parse_mode='HTML')
@@ -174,7 +182,12 @@ class TelegramBot:
                                 return
                             else:
                                 # Still in progress
-                                await proc_msg.edit_text(f"🔍 Still analyzing... (Attempt {attempts})", parse_mode='HTML')
+                                # Call formatter anyway to show partial results!
+                                intermediate_response = self.response_formatter.format_combined_response(
+                                    status_data.get("url", text), 
+                                    status_data.get("results", {})
+                                )
+                                await proc_msg.edit_text(intermediate_response, parse_mode='HTML')
                         else:
                             # HTTP error on status check
                             await proc_msg.edit_text(f"⚠️ Warning: Status check failed (HTTP {status_resp.status}). Retrying...", parse_mode='HTML')

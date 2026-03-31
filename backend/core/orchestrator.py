@@ -83,7 +83,7 @@ class ScanOrchestrator:
         logger.info("⚖️ Verdict: Falling back to WARNING")
         return "WARNING"
 
-    async def scan_url(self, item_value: str, item_type: str = "url", vt_threshold: int = 5) -> Dict:
+    async def scan_url(self, item_value: str, item_type: str = "url", vt_threshold: int = 5, on_update_callback=None) -> Dict:
         """
         Runs the full scan pipeline and returns a dictionary.
         """
@@ -119,6 +119,9 @@ class ScanOrchestrator:
                             "error": result.error,
                             "is_pending": result.is_pending
                         }
+                        
+                        if on_update_callback:
+                            await on_update_callback(results_map)
 
                         # Handle VT polling if necessary
                         if result.source == VirusTotalChecker.SOURCE_NAME and result.is_pending:
