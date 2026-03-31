@@ -41,23 +41,27 @@ graph TD
     end
 
     %% Client Interactions
-    Telegram -->|HTTP POST| API
+    Telegram -->|1. HTTP POST| API
     WebUI -->|1. Internal Fetch| Proxy["🛡️ Next.js Proxy (/api/scan)"]
     Proxy -->|2. HTTP POST| API
     
-    %% Polling
+    %% Polling & Streaming
+    Telegram -->|2. Poll Status| Status
     WebUI -->|3. Poll Status| Status
-    Status -->|Read| FS
+    Status -->|Read Live Status| FS
     
     %% Internal Routing
     API --> Extract
     Extract --> Orch
-    API -->|Write In-Progress| FS
+    API -->|Write Initial Status| FS
 
-    %% Orchestration
+    %% Orchestration & Callback
     Orch -->|Concurrent Trigger| VT
     Orch -->|Concurrent Trigger| WR
     Orch -->|Concurrent Trigger| AI
+    VT -->|Partial Result Update| FS
+    WR -->|Partial Result Update| FS
+    AI -->|Partial Result Update| FS
 
     %% Data Fetching
     VT --> VTAPI
@@ -66,7 +70,7 @@ graph TD
     AI -->|2. Multimodal Analysis| GeminiAPI
 
     %% Results
-    Orch -->|Write Results| FS
+    Orch -->|Write Final Verdict| FS
 ```
 
 ---
@@ -79,7 +83,7 @@ graph TD
 - Relies on Google Firestore for background job tracking, enabling mobile-compatible polling!
 
 ### 2. `backend/core/` (The Heavy Business Engine)
-- **`orchestrator.py`**: Manages the multi-processing threads and captures responses. If Google Web Risk surfaces a deterministic "High Threat" early, the Orchestrator safely cancels the Playwright render to conserve API credits.
+- **`orchestrator.py`**: Manages the multi-processing threads and captures responses. If Google Web Risk surfaces a deterministic "High Threat" early, the Orchestrator can cancel parallel scrapes to conserve API credits (controlled by the `allow_early_cancel` parameter, which defaults to `False` to favor full corroboration for metrics systems). The Telegram Bot explicitly overrides this to `True` for speed.
 - **`scanners.py`**: Wrappers for VirusTotal static vendor checks, thresholds, and Google Threat Intelligence (GTI) heuristics. (Note: Supports fallback to standard VT scoring if the API key lacks GTI access; requires `x-tool: project-mata-mata` header for tracking).
 - **`ai_phishing_detector.py`**: Spawns independent unshielded headless instances to grab screenshot binary streams + intercept in-line Javascript payload dumps. This payload is shipped straight to **Gemini 2.5 Multi-Modal API** for context inference.
 

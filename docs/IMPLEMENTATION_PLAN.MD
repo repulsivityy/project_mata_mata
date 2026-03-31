@@ -12,10 +12,10 @@ Instead of refactoring the old `telegram_url_checker` monolithic platform in pla
 2. Form a functional `POST /api/v1/scan` endpoint inside `main.py` allowing clients to query any URL string.
 3. Validate robust JSON response structures.
 
-## Phase 3: Build the Lightweight Telegram Client
+## Phase 3: Build the Lightweight Telegram Client (COMPLETED)
 1. Set up `clients/telegram_bot/bot.py`.
 2. Load it securely with the new production `TELEGRAM_TOKEN`.
-3. Update the monolithic legacy routing. The new `bot.py` must simply ping `localhost:8000/api/v1/scan` or its cloud counterpart and relay the precise rich-text messages back to Telegram end-users.
+3. Update it to use asynchronous polling to support the new Firestore queue, enabling live updates tracking partial results. Add standard HTTP dummy server on `$PORT` to prevent serverless deployment closures on Cloud Run.
 
 ## Phase 4: Build the Web Frontend Platform
 1. Create a modern web interface in `clients/web_frontend/` using React or Next.js.

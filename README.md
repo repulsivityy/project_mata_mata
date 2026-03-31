@@ -53,6 +53,7 @@ WEBRISK_API_KEY=your_webrisk_key
 GEMINI_APIKEY=your_gemini_key
 MATA_API_KEY=your_internal_secret_key
 DEBUG_MODE=false
+PORT=8080 # Dummy port binder for serverless platforms run health checks (Cloud Run)
 ```
 
 Then, execute Docker Compose to automatically build the Playwright backend, boot the Telegram agent, and compile the Next.js React Web portal:
@@ -63,7 +64,15 @@ docker-compose up --build -d
 
 - **Threat Dashboard**: `http://localhost:3000`
 - **FastAPI Specs**: `http://localhost:8000/docs`
-- **Telegram Bot**: Operates silently in the background, listening to chat payloads.
+- **Telegram Bot**: Listens to chat payloads and polls the FastAPI backend.
+- **Custom Integrations (Third-Party Systems)**: The API schema accepts a JSON POST body. It defaults to full scanning (`allow_early_cancel = False`) to get full metrics corroboration.
+  ```json
+  {
+    "url": "https://suspicious-link.com",
+    "vt_threshold": 5,
+    "allow_early_cancel": false
+  }
+  ```
 
 ## 🚀 Production Deployment (Terraform + Cloud Build)
 
