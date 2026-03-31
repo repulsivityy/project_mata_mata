@@ -132,7 +132,8 @@ async def perform_scan(job_id: str, url: str, item_type: str, vt_threshold: int)
         logger.error(f"Background scan failed for job {job_id}: {e}")
         await doc_ref.set({
             "status": "failed",
-            "error": str(e),
+            "error": "An internal error occurred during analysis.",
+            "internal_error": str(e),
             "expireAt": datetime.utcnow() + timedelta(hours=1)
         }, merge=True)
 
@@ -188,6 +189,8 @@ async def get_scan_status(job_id: str):
     # Let's remove expireAt as it's an internal Firestore timestamp
     if "expireAt" in data:
         del data["expireAt"]
+    if "internal_error" in data:
+        del data["internal_error"]
     
     return data
 

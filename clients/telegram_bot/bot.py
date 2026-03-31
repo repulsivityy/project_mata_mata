@@ -42,10 +42,10 @@ class ResponseFormatter:
         "ERROR":      {"emoji": "❓", "level": "ERROR",   "rec": "❓ INCONCLUSIVE - Exercise caution as threat assessment is unclear."}
     }
 
-    def _get_risk_level(self, vt_result: dict, wr_result: dict, ai_result: dict) -> str:
+    def _get_risk_level(self, vt_result: dict, gti_result: dict, wr_result: dict, ai_result: dict) -> str:
         # 1. Critical DANGER check first
         vt_factors = vt_result.get("risk_factors", {})
-        gti_factors = gti_results.get("risk_factors", {})
+        gti_factors = gti_result.get("risk_factors", {})
         wr_factors = wr_result.get("risk_factors", {})
         ai_factors = ai_result.get("risk_factors", {})
 
@@ -78,7 +78,7 @@ class ResponseFormatter:
         wr_result = results_map.get("Google Web Risk", {"error": True, "summary": "Not run", "risk_factors": {}})
         ai_result = results_map.get("AI Analysis", {"error": True, "summary": "Not run", "risk_factors": {}})
 
-        risk_level = self._get_risk_level(vt_result, wr_result, ai_result)
+        risk_level = self._get_risk_level(vt_result, gti_result, wr_result, ai_result)
         template = self.RESPONSE_TEMPLATES[risk_level]
 
         header = f"{template['emoji']} {template['level']}"
@@ -215,7 +215,7 @@ class TelegramBot:
                         
         except Exception as e:
             logger.error(f"Error calling backend API: {e}", exc_info=True)
-            await proc_msg.edit_text(f"❌ <b>Connection Error</b>: Could not reach backend API at {API_BACKEND_URL}.", parse_mode='HTML')
+            await proc_msg.edit_text(f"❌ <b>Connection Error</b>: Could not reach backend API. Please try again later.", parse_mode='HTML')
 
     def run(self):
         self.application.run_polling()
