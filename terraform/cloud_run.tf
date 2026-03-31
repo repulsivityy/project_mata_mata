@@ -116,6 +116,15 @@ resource "google_cloud_run_v2_service" "bot" {
         }
       }
       env {
+        name = "MATA_API_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.mata_api_key.secret_id
+            version = "latest"
+          }
+        }
+      }
+      env {
         name  = "API_BACKEND_URL"
         value = "${google_cloud_run_v2_service.backend.uri}/api/v1/scan"
       }

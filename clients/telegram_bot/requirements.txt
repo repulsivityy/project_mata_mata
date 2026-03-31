@@ -1,3 +1,6 @@
 python-telegram-bot
 aiohttp
 python-dotenv
+google-cloud-secret-manager
+pytest
+pytest-asyncio
