@@ -124,9 +124,9 @@ class ScanOrchestrator:
                         if source_name == "VirusTotal":
                             gti_assessment = result.details.get("gti_assessment")
                             if gti_assessment:
-                                results_map["Google Threat Intelligence"] = {
+                                results_map["GTI Assessment"] = {
                                     "is_malicious": gti_assessment.get("verdict", {}).get("value") == "VERDICT_MALICIOUS",
-                                    "summary": gti_assessment.get("verdict", {}).get("value", "Unknown"),
+                                    "summary": result.details.get("description") or gti_assessment.get("verdict", {}).get("value") or "Unknown",
                                     "details": gti_assessment,
                                     "risk_factors": {
                                         "gti_verdict": gti_assessment.get("verdict", {}).get("value"),
@@ -137,7 +137,7 @@ class ScanOrchestrator:
                                 }
                             else:
                                 # Not available (Classic VT key or no data)
-                                results_map["Google Threat Intelligence"] = {
+                                results_map["GTI Assessment"] = {
                                     "is_malicious": False,
                                     "summary": "Not available",
                                     "details": {},

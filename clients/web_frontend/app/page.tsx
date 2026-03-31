@@ -253,20 +253,7 @@ export default function MataMataDashboard() {
               </div>
             ))}
 
-            {/* Dedicated card for GTI Verdict moved from mockup flow */}
-            {result.results?.["VirusTotal"]?.risk_factors?.gti_verdict && (
-              <div className="bg-white p-4 md:p-6 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl font-bold text-black">GTI Assessment</h3>
-                  <span className="px-3 py-1 text-xs font-bold border-2 border-black bg-[#00ffff] text-black">
-                    {result.results["VirusTotal"].risk_factors.gti_verdict}
-                  </span>
-                </div>
-                <p className="text-black text-sm">
-                  {result.results["VirusTotal"].details?.description || "Google Threat Intelligence verdict extracted from VirusTotal response."}
-                </p>
-              </div>
-            )}
+            {/* Dedicated card for GTI Verdict removed since backend now provides unified GTI Assessment */}
           </div>
         </div>
       )}

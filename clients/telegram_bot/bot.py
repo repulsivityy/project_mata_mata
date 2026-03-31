@@ -74,7 +74,7 @@ class ResponseFormatter:
     def format_combined_response(self, target: str, results_map: dict) -> str:
         
         vt_result = results_map.get("VirusTotal", {"error": True, "summary": "Not run", "risk_factors": {}})
-        gti_result = results_map.get("Google Threat Intelligence", {"error": True, "summary": "Not run", "risk_factors": {}})
+        gti_result = results_map.get("GTI Assessment", {"error": True, "summary": "Not run", "risk_factors": {}})
         wr_result = results_map.get("Google Web Risk", {"error": True, "summary": "Not run", "risk_factors": {}})
         ai_result = results_map.get("AI Analysis", {"error": True, "summary": "Not run", "risk_factors": {}})
 
