@@ -171,17 +171,17 @@ class ScanOrchestrator:
                 if allow_early_cancel:
                     wr_result = results_map.get(WebRiskChecker.SOURCE_NAME)
                     if wr_result and wr_result.get("risk_factors", {}).get("has_high_threat"):
-                    logger.warning(f"High-confidence threat from Web Risk for {item_value}. Cancelling remaining tasks.")
-                    for p_task in pending_tasks:
-                        p_task.cancel()
-                        s_name = p_task.get_name()
-                        if s_name not in results_map:
-                            results_map[s_name] = {
-                                "is_malicious": False, 
-                                "summary": "❌ Cancelled due to confirmed Web Risk threat", 
-                                "error": False
-                            }
-                    break # Exit early
+                        logger.warning(f"High-confidence threat from Web Risk for {item_value}. Cancelling remaining tasks.")
+                        for p_task in pending_tasks:
+                            p_task.cancel()
+                            s_name = p_task.get_name()
+                            if s_name not in results_map:
+                                results_map[s_name] = {
+                                    "is_malicious": False, 
+                                    "summary": "❌ Cancelled due to confirmed Web Risk threat", 
+                                    "error": False
+                                }
+                        break # Exit early
 
             return {
                 "url": item_value,
