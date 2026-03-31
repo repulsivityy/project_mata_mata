@@ -13,6 +13,7 @@ The monolithic system is heavily refactored into a scalable API to service downs
 - **Decoupled Architecture:** Isolate specific capabilities (Scanners, AI Agents, Telegram Integrations) into singular, decoupled endpoints so frontend logic never has to manage Playwright or web drivers.
 - **Deep Evasion Detection:** Headless chromium and firefox instances fetch sites synchronously, bypassing Cloudflare cloaking to extract visual DOMs, inline javascript, and exfiltrated background network requests.
 - **Cloud-Native Deployability:** Ensure the `backend` operates effortlessly behind `FastAPI` inside stateless Docker containers, explicitly deployable to Google Cloud Run or GKE. 
+- **Reliable Session Persistence:** Implement an asynchronous background-job pattern with polling to ensure scans complete successfully even if a mobile client loses connection or goes to sleep mid-transit.
 
 ## 4. Key Components
 1. **Core Scanners:** `VirusTotalChecker`, `WebRiskChecker`, `GTI`.
@@ -21,3 +22,4 @@ The monolithic system is heavily refactored into a scalable API to service downs
 4. **Clients:** 
    - A minimalist Telegram Bot (acting strictly as a presentation UI for users).
    - A modern React/Next.js "Threat Intelligence" dark-mode web dashboard.
+5. **Persistence Real-Time Caching:** Google Firestore acts as a centralized results pool for clients and third parties to share asset intelligence based on URL hashes without repeatedly burning expensive external API rate limits.

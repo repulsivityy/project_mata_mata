@@ -7,7 +7,7 @@ Instead of refactoring the old `telegram_url_checker` monolithic platform in pla
 2. **Logic Extraction**: Extract the raw class processors representing `URLExtractor`, `VirusTotalChecker`, `WebRiskChecker` & `GTI` into individual modules within `backend/core`.
 3. **Migration of AI Brain**: Import the highly tuned `ai_phishing_detector.py` directly.
 
-## Phase 2: Build the FastAPI Backend API layer (IN PROGRESS)
+## Phase 2: Build the FastAPI Backend API layer (COMPLETED)
 1. Write `backend/core/orchestrator.py` functioning as the main API coordinator, instantiating `BaseChecker` child scripts synchronously and asynchronously.
 2. Form a functional `POST /api/v1/scan` endpoint inside `main.py` allowing clients to query any URL string.
 3. Validate robust JSON response structures.
@@ -27,4 +27,7 @@ Instead of refactoring the old `telegram_url_checker` monolithic platform in pla
 2. Supply a root `docker-compose.yml` defining the API Backend, Telegram Client, and NextJS UI running as native services side-by-side.
 3. Verify that the structure natively translates for immediate production deployments via **Google Cloud Run** and **GKE**.
 
-
+## Phase 6: Async Polling & Firestore Caching (COMPLETED)
+1. Transition API from blocking requests to job-based background workers to resolve mobile browser timeouts.
+2. Integrate **Google Cloud Firestore** to cache results by computing a SHA-256 hash on input URLs.
+3. Hook React `useEffect` loops to poll endpoints checking status properties before releasing final state data.

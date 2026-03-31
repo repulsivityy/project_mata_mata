@@ -15,6 +15,7 @@ project_mata_mata/
 ├── clients/
 │   ├── telegram_bot/         # Lightweight bot hitting the FastAPI
 │   └── web_frontend/         # Next.js React Threat Dashboard (Port :3000)
+├── terraform/                # Infrastructure as Code (including Firestore)
 └── docker-compose.yml        # Orchestrates all 3 platforms seamlessly
 ```
 
@@ -29,6 +30,10 @@ To prevent abuse and protect sensitive threat intelligence keys, Project Mata-Ma
 - **VirusTotal**: Checks raw static community detections and Google Threat Intelligence (GTI) scoring. (Note: Falls back to standard VT scoring if the API key lacks GTI access; requires `x-tool: project-mata-mata` header for tracking).
 - **Google Web Risk**: Evaluates domains against global blacklists.
 - **Gemini 2.5 Multi-Modal Agent**: Renders Chromium headless instances behind Cloudflare shields to analyze visual DOM spoofing, inline hidden scripts, and exfiltrated background network POSTs.
+
+## 🔄 Job Polling & Caching
+- **Firestore Integration**: Results are cached in Google Cloud Firestore (`mata_mata_scans`), keyed by the SHA-256 hash of the URL. Identical scans share results and save API quota!
+- **Mobile URL Persistence**: Background tasks and polling allow mobile users to resume active scans even after browser suspensions or locks.
 
 ## ⚖️ Final Verdict Scoring
 
@@ -85,6 +90,31 @@ The repository uses Google Cloud Build 2nd Gen Triggers. The moment you push to 
    terraform init
    terraform apply
    ```
+
+
+## 🩺 Troubleshooting
+
+### 🔑 Authentication and ADC
+If Terraform or scripts fail to connect to GCP, ensure your Application Default Credentials (ADC) are active:
+```bash
+gcloud auth application-default login
+```
+
+### 🔥 Firestore Conflicts (Error 409)
+If `terraform apply` returns `Error 409: Database already exists. Please use another database_id`, it means your project already has a `(default)` Firestore instance running. 
+- **Fix**: Comment out or remove the `google_firestore_database` resource in `firestore.tf`. Let Terraform manage only the IAM permissions (`google_project_iam_member`) for it.
+
+### 🔍 View Database State
+To verify if Firestore is active and check its properties:
+```bash
+gcloud firestore databases list --project=virustotal-lab
+```
+
+### 🚢 Track CI/CD Build Logs (Cloud Build)
+If you push to GitHub and the site doesn't update, verify your Cloud Run triggers ran successfully:
+```bash
+gcloud builds list --region=asia-southeast1 --limit=5
+```
 
 
 ### Roadmap

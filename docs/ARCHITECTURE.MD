@@ -15,6 +15,7 @@ graph TD
 
     subgraph Backend ["Python FastAPI Backend (Stateless Container)"]
         API["📡 API Endpoint (/api/v1/scan)"]
+        Status["📡 Status Endpoint (/api/v1/scan/status/{id})"]
         
         subgraph Core ["Orchestration Center"]
             Extract["🔍 URL Extractor"]
@@ -28,6 +29,10 @@ graph TD
         end
     end
 
+    subgraph Data ["Persistence"]
+        FS["🔥 Firestore (mata_mata_scans)"]
+    end
+
     subgraph External ["External Services & Scopes"]
         TargetWeb["🌐 Untrusted Target Website"]
         VTAPI["☁️ VirusTotal API"]
@@ -36,13 +41,18 @@ graph TD
     end
 
     %% Client Interactions
-    Telegram -->|HTTP POST with API Key| API
+    Telegram -->|HTTP POST| API
     WebUI -->|1. Internal Fetch| Proxy["🛡️ Next.js Proxy (/api/scan)"]
-    Proxy -->|2. HTTP POST with API Key| API
-
+    Proxy -->|2. HTTP POST| API
+    
+    %% Polling
+    WebUI -->|3. Poll Status| Status
+    Status -->|Read| FS
+    
     %% Internal Routing
     API --> Extract
     Extract --> Orch
+    API -->|Write In-Progress| FS
 
     %% Orchestration
     Orch -->|Concurrent Trigger| VT
@@ -55,14 +65,8 @@ graph TD
     AI -->|1. Playwright Scraping| TargetWeb
     AI -->|2. Multimodal Analysis| GeminiAPI
 
-    %% Styling
-    classDef client fill:#2D1B36,stroke:#612940,color:#FFF;
-    classDef backend fill:#1E293B,stroke:#334155,color:#FFF;
-    classDef extern fill:#111,stroke:#333,color:#888;
-    
-    class Telegram,WebUI client;
-    class API,Extract,Orch,VT,WR,AI backend;
-    class TargetWeb,VTAPI,WRAPI,GeminiAPI extern;
+    %% Results
+    Orch -->|Write Results| FS
 ```
 
 ---
@@ -71,8 +75,8 @@ graph TD
 
 ### 1. `backend/api/` (The Presentation Layer)
 - Driven by `FastAPI`.
-- Exposes `POST /api/v1/scan` to external clients. 
-- Stateless and strictly listens to container `$PORT`.
+- Exposes `POST /api/v1/scan` and `GET /api/v1/scan/status/{id}`.
+- Relies on Google Firestore for background job tracking, enabling mobile-compatible polling!
 
 ### 2. `backend/core/` (The Heavy Business Engine)
 - **`orchestrator.py`**: Manages the multi-processing threads and captures responses. If Google Web Risk surfaces a deterministic "High Threat" early, the Orchestrator safely cancels the Playwright render to conserve API credits.
@@ -87,6 +91,10 @@ graph TD
 - A highly stylized Dark-mode Single Page Application targeting Next.js React libraries.
 - Features neon threat indicators, a radar spinner, and beautiful tabular drill-downs of the scanner JSON outputs.
 - **BFF Proxy**: Includes a server-side API route (`app/api/scan/route.ts`) that acts as a secure Backend-for-Frontend proxy, protecting the master `MATA_API_KEY` from being exposed to the browser.
+
+### 5. `Data / Persistence` (State Layer)
+- **Google Firestore** (`mata_mata_scans` collection): Stores analysis jobs and results. It keys documents by the SHA-256 hash of the URL to prevent duplicate scans and allow cache reuse!
+- **TTL (Time-to-Live)**: Automatically purges documents based on the `expireAt` field (48 hours for completed, 5 minutes for in-progress).
 
 ---
 
