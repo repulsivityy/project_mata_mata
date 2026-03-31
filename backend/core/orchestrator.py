@@ -178,9 +178,15 @@ class ScanOrchestrator:
                             if s_name not in results_map:
                                 results_map[s_name] = {
                                     "is_malicious": False, 
-                                    "summary": "❌ Cancelled due to confirmed Web Risk threat", 
+                                    "summary": "❌ Cancelled due to confirmed threat", 
                                     "error": False
                                 }
+                                if s_name == "VirusTotal":
+                                    results_map["GTI Assessment"] = {
+                                        "is_malicious": False,
+                                        "summary": "❌ Cancelled due to confirmed threat",
+                                        "error": False
+                                    }
                         break # Exit early
 
             return {

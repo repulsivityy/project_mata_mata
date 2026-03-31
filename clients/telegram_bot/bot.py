@@ -95,10 +95,11 @@ class ResponseFormatter:
         
         if gti_verdict and gti_verdict != "Unknown":
             details_lines.append(f"GTI: {gti_verdict}")
+        elif gti_result.get("summary") == "❌ Cancelled due to confirmed threat":
+            details_lines.append(f"GTI: {gti_result.get('summary')}")
         elif gti_result.get("is_pending"):
             details_lines.append("GTI: Still analyzing...")
         elif gti_result.get("not_available"):
-            # Omit GTI entirely if not available (e.g. classic key)
             pass
             
         details_lines.append(f"Google Web Risk: {wr_result.get('summary')}")
