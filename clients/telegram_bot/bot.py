@@ -190,10 +190,31 @@ class TelegramBot:
     def run(self):
         self.application.run_polling()
 
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(b"OK")
+    def log_message(self, format, *args):
+        return # Suppress logging to avoid clutter
+
+def start_health_check_server():
+    port = int(os.environ.get("PORT", "8080"))
+    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+    logger.info(f"Starting dummy health check server on port {port}...")
+    server.serve_forever()
+
 if __name__ == "__main__":
     if not TELEGRAM_TOKEN:
         logger.error("TELEGRAM_TOKEN is missing in environment.")
         exit(1)
+    
+    # Start dummy health check server for Cloud Run
+    threading.Thread(target=start_health_check_server, daemon=True).start()
     
     bot = TelegramBot(TELEGRAM_TOKEN)
     logger.info("Starting Telegram Bot Poller...")
