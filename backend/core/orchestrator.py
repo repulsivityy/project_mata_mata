@@ -120,6 +120,33 @@ class ScanOrchestrator:
                             "is_pending": result.is_pending
                         }
                         
+                        # Extract GTI as a separate service if available
+                        if source_name == "VirusTotal":
+                            gti_assessment = result.details.get("gti_assessment")
+                            if gti_assessment:
+                                results_map["Google Threat Intelligence"] = {
+                                    "is_malicious": gti_assessment.get("verdict", {}).get("value") == "VERDICT_MALICIOUS",
+                                    "summary": gti_assessment.get("verdict", {}).get("value", "Unknown"),
+                                    "details": gti_assessment,
+                                    "risk_factors": {
+                                        "gti_verdict": gti_assessment.get("verdict", {}).get("value"),
+                                        "gti_score": gti_assessment.get("threat_score", {}).get("value")
+                                    },
+                                    "error": False,
+                                    "is_pending": False
+                                }
+                            else:
+                                # Not available (Classic VT key or no data)
+                                results_map["Google Threat Intelligence"] = {
+                                    "is_malicious": False,
+                                    "summary": "Not available",
+                                    "details": {},
+                                    "risk_factors": {},
+                                    "error": False,
+                                    "is_pending": False,
+                                    "not_available": True
+                                }
+                        
                         if on_update_callback:
                             await on_update_callback(results_map)
 

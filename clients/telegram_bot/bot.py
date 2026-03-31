@@ -45,26 +45,28 @@ class ResponseFormatter:
     def _get_risk_level(self, vt_result: dict, wr_result: dict, ai_result: dict) -> str:
         # 1. Critical DANGER check first
         vt_factors = vt_result.get("risk_factors", {})
+        gti_factors = gti_results.get("risk_factors", {})
         wr_factors = wr_result.get("risk_factors", {})
         ai_factors = ai_result.get("risk_factors", {})
 
-        if (vt_factors.get("gti_verdict") == "VERDICT_MALICIOUS" or 
-            (vt_factors.get("gti_score") is not None and vt_factors.get("gti_score") >= 60) or 
+        if (gti_factors.get("gti_verdict") == "VERDICT_MALICIOUS" or 
+            #(vt_factors.get("gti_score") is not None and vt_factors.get("gti_score") >= 60) or 
             wr_factors.get("has_high_threat") or 
             ai_factors.get("ai_risk") == "high"):
             return "DANGER"
 
         # 2. Check if still processing
-        if vt_result.get("is_pending") or wr_result.get("is_pending") or ai_result.get("is_pending"):
+        if vt_result.get("is_pending") or gti_result.get("is_pending") or wr_result.get("is_pending") or ai_result.get("is_pending"):
             return "PROCESSING"
 
         # 3. Check for errors
-        if vt_result.get("error") or wr_result.get("error"):
+        if vt_result.get("error") or gti_result.get("error") or wr_result.get("error"):
             return "ERROR"
 
         # 4. Success/Safe check
-        if (vt_factors.get("gti_verdict") == "VERDICT_HARMLESS" or 
-            (vt_factors.get("classic_score") == 0 and wr_factors.get("is_clean"))):
+        if (gti_factors.get("gti_verdict") == "VERDICT_HARMLESS" or 
+            (wr_factors.get("is_clean")) and 
+            (vt_factors.get("classic_score") == 0)):
             return "SAFE"
             
         return "WARNING"
@@ -72,6 +74,7 @@ class ResponseFormatter:
     def format_combined_response(self, target: str, results_map: dict) -> str:
         
         vt_result = results_map.get("VirusTotal", {"error": True, "summary": "Not run", "risk_factors": {}})
+        gti_result = results_map.get("Google Threat Intelligence", {"error": True, "summary": "Not run", "risk_factors": {}})
         wr_result = results_map.get("Google Web Risk", {"error": True, "summary": "Not run", "risk_factors": {}})
         ai_result = results_map.get("AI Analysis", {"error": True, "summary": "Not run", "risk_factors": {}})
 
@@ -83,7 +86,21 @@ class ResponseFormatter:
         defanged_target = target.replace('.', '[.]').replace(':', '[:]')
 
         details_lines = []
+        
         details_lines.append(f"VirusTotal: {vt_result.get('summary')}")
+        
+        vt_factors = vt_result.get('risk_factors', {})
+        gti_verdict = vt_factors.get('gti_verdict')
+        #gti_score = vt_factors.get('gti_score')
+        
+        if gti_verdict and gti_verdict != "Unknown":
+            details_lines.append(f"GTI: {gti_verdict}")
+        elif gti_result.get("is_pending"):
+            details_lines.append("GTI: Still analyzing...")
+        elif gti_result.get("not_available"):
+            # Omit GTI entirely if not available (e.g. classic key)
+            pass
+            
         details_lines.append(f"Google Web Risk: {wr_result.get('summary')}")
         details_lines.append(f"AI Analysis: {ai_result.get('summary')}")
 
