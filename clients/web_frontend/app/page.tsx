@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 
 export default function MataMataDashboard() {
   const [url, setUrl] = useState('')
@@ -8,6 +8,7 @@ export default function MataMataDashboard() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState('')
+  const [jobId, setJobId] = useState('')
 
   const handleScan = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -17,21 +18,62 @@ export default function MataMataDashboard() {
     setResult(null)
 
     try {
-      // Pointing to the dockerized fastAPI instance
-      const res = await fetch('/api/scan', {
+      const res = await fetch('/api/v1/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, vt_threshold: parseInt(threshold) || 5 })
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.detail || 'Scan failed')
-      setResult(data)
+      
+      setJobId(data.job_id)
+      localStorage.setItem('activeJobId', data.job_id)
+      localStorage.setItem('activeUrl', url)
     } catch (err: any) {
       setError(err.message)
-    } finally {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    const savedJobId = localStorage.getItem('activeJobId')
+    const savedUrl = localStorage.getItem('activeUrl')
+    
+    if (savedJobId && savedUrl) {
+      setJobId(savedJobId)
+      setUrl(savedUrl)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!jobId) return
+
+    setLoading(true)
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/v1/scan/status/${jobId}`)
+        const data = await res.json()
+        
+        if (data.status === 'completed') {
+          setResult(data)
+          setLoading(false)
+          clearInterval(interval)
+          localStorage.removeItem('activeJobId')
+        } else if (data.status === 'failed') {
+          setError(data.error || 'Scan failed')
+          setLoading(false)
+          clearInterval(interval)
+          localStorage.removeItem('activeJobId')
+        }
+      } catch (err: any) {
+        setError(err.message)
+        setLoading(false)
+        clearInterval(interval)
+      }
+    }, 5000) // Poll every 5 seconds
+
+    return () => clearInterval(interval)
+  }, [jobId])
 
   return (
     <main className="w-full max-w-7xl mx-auto p-4 md:p-8 relative flex flex-col items-center">

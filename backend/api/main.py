@@ -1,11 +1,13 @@
-from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import logging
 import os
 import hashlib
 import hmac
+from datetime import datetime, timedelta
 from google.cloud import secretmanager
+from google.cloud import firestore
 
 from backend.core.orchestrator import ScanOrchestrator
 
@@ -63,6 +65,7 @@ app.add_middleware(
 )
 
 orchestrator = ScanOrchestrator()
+firestore_client = firestore.AsyncClient()
 
 class ScanRequest(BaseModel):
     url: str
@@ -74,13 +77,45 @@ class ScanResponse(BaseModel):
     results: dict
     final_verdict: str
 
+class ScanJobResponse(BaseModel):
+    job_id: str
+    status: str
+
 @app.on_event("shutdown")
 async def shutdown_event():
     logger.info("Closing orchestrator sessions...")
     await orchestrator.close()
 
-@app.post("/api/v1/scan", response_model=ScanResponse, dependencies=[Depends(verify_api_key)])
-async def scan_url(request: ScanRequest):
+async def perform_scan(job_id: str, url: str, item_type: str, vt_threshold: int):
+    try:
+        logger.info(f"Starting background scan for job {job_id}")
+        report = await orchestrator.scan_url(url, item_type, vt_threshold=vt_threshold)
+        
+        # Add TTL field: expire in 48 hours
+        expire_at = datetime.utcnow() + timedelta(hours=48)
+        
+        # Save to Firestore
+        doc_ref = firestore_client.collection("mata_mata_scans").document(job_id)
+        await doc_ref.set({
+            "status": "completed",
+            "results": report.get("results", {}),
+            "final_verdict": report.get("final_verdict", "UNKNOWN"),
+            "url": url,
+            "type": item_type,
+            "expireAt": expire_at
+        })
+        logger.info(f"Job {job_id} completed and saved to Firestore.")
+    except Exception as e:
+        logger.error(f"Background scan failed for job {job_id}: {e}")
+        doc_ref = firestore_client.collection("mata_mata_scans").document(job_id)
+        await doc_ref.set({
+            "status": "failed",
+            "error": str(e),
+            "expireAt": datetime.utcnow() + timedelta(hours=1) # Expire failed jobs faster!
+        })
+
+@app.post("/api/v1/scan", response_model=ScanJobResponse, dependencies=[Depends(verify_api_key)])
+async def scan_url(request: ScanRequest, background_tasks: BackgroundTasks):
     logger.info(f"Received scan request for URL: {request.url}")
     
     # Simple extraction to ensure it handles IP/URL validation
@@ -92,16 +127,47 @@ async def scan_url(request: ScanRequest):
     if target["type"] == "ip_address":
         raise HTTPException(status_code=400, detail="Standalone IPs are not scannable.")
     
-    # Wait for the Orchestrator to fully run Playwright + VT + WebRisk
-    try:
-        report = await orchestrator.scan_url(target["value"], target["type"], vt_threshold=request.vt_threshold)
-        if "error" in report and "results" not in report:
-            raise HTTPException(status_code=500, detail=report["error"])
-        
-        return report
-    except Exception as e:
-        logger.error(f"Scan API failed: {e}")
-        raise HTTPException(status_code=500, detail="Internal scanning failure.")
+    url_value = target["value"]
+    # Compute SHA-256 hash of the URL
+    job_id = hashlib.sha256(url_value.encode('utf-8')).hexdigest()
+    
+    # Check Firestore
+    doc_ref = firestore_client.collection("mata_mata_scans").document(job_id)
+    doc = await doc_ref.get()
+    
+    if doc.exists:
+        data = doc.to_dict()
+        logger.info(f"Found existing job {job_id} with status {data.get('status')}")
+        return ScanJobResponse(job_id=job_id, status=data.get("status"))
+    
+    # Create new job
+    await doc_ref.set({
+        "status": "in_progress",
+        "url": url_value,
+        "type": target["type"],
+        "expireAt": datetime.utcnow() + timedelta(minutes=5) # Temporary TTL until done
+    })
+    
+    # Add background task
+    background_tasks.add_task(perform_scan, job_id, url_value, target["type"], request.vt_threshold)
+    
+    return ScanJobResponse(job_id=job_id, status="in_progress")
+
+@app.get("/api/v1/scan/status/{job_id}")
+async def get_scan_status(job_id: str):
+    doc_ref = firestore_client.collection("mata_mata_scans").document(job_id)
+    doc = await doc_ref.get()
+    
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Job not found.")
+    
+    data = doc.to_dict()
+    # Remove large/internal fields if necessary, or just return it!
+    # Let's remove expireAt as it's an internal Firestore timestamp
+    if "expireAt" in data:
+        del data["expireAt"]
+    
+    return data
 
 @app.get("/health")
 async def health_check():

@@ -5,4 +5,5 @@ playwright
 google-generativeai
 pydantic
 google-cloud-secret-manager
+google-cloud-firestore
 
