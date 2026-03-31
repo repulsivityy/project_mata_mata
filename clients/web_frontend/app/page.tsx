@@ -18,7 +18,7 @@ export default function MataMataDashboard() {
     setResult(null)
 
     try {
-      const res = await fetch('/api/v1/scan', {
+      const res = await fetch('/api/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, vt_threshold: parseInt(threshold) || 5 })
@@ -51,7 +51,7 @@ export default function MataMataDashboard() {
     setLoading(true)
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/v1/scan/status/${jobId}`)
+        const res = await fetch(`/api/scan?job_id=${jobId}`)
         const data = await res.json()
         
         if (data.status === 'completed') {
