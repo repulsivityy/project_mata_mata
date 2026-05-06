@@ -17,6 +17,10 @@ MALICIOUS_THRESHOLD = 5
 API_TIMEOUT = 10
 DEBUG_MODE = True
 
+VT_POLLING_SCHEDULE = [15, 15, 30, 30, 60]
+VT_POLLING_DEFAULT_INTERVAL = 30
+TOTAL_POLLING_TIMEOUT = 300
+
 class VirusTotalChecker(BaseChecker):
     SOURCE_NAME = "VirusTotal"
     BASE_URL = "https://www.virustotal.com/api/v3"
