@@ -179,7 +179,7 @@ class TelegramBot:
                 status_url = f"{API_BACKEND_URL.replace('/scan', '/scan/status')}/{job_id}"
                 
                 attempts = 0
-                max_time = 360  # Increased to 6 mins to account for dual browser + VT polling
+                max_time = 360  # Increased to account for dual browser + polling
                 start_time = asyncio.get_running_loop().time()
                 
                 while (asyncio.get_running_loop().time() - start_time) < max_time:
