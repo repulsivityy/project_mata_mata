@@ -123,7 +123,7 @@ class VirusTotalChecker(BaseChecker):
             if DEBUG_MODE:
                 logger.info(f"🔍 VT GTI Assessment found: {gti_assessment}")
                 
-            details.update(gti_assessment)
+            details["gti_assessment"] = gti_assessment
             risk_factors.update({
                 "gti_verdict": gti_verdict,
                 "gti_score": gti_score
