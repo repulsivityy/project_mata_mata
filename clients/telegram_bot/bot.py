@@ -71,14 +71,21 @@ class ResponseFormatter:
             
         return "WARNING"
 
-    def format_combined_response(self, target: str, results_map: dict) -> str:
+    def format_combined_response(self, target: str, results_map: dict, final_verdict: str = None) -> str:
         
         vt_result = results_map.get("VirusTotal", {"error": True, "summary": "Not run", "risk_factors": {}})
         gti_result = results_map.get("GTI Assessment", {"error": True, "summary": "Not run", "risk_factors": {}})
         wr_result = results_map.get("Google Web Risk", {"error": True, "summary": "Not run", "risk_factors": {}})
         ai_result = results_map.get("AI Analysis", {"error": True, "summary": "Not run", "risk_factors": {}})
 
-        risk_level = self._get_risk_level(vt_result, gti_result, wr_result, ai_result)
+        if final_verdict:
+            risk_level = final_verdict
+        else:
+            risk_level = self._get_risk_level(vt_result, gti_result, wr_result, ai_result)
+            
+        if risk_level not in self.RESPONSE_TEMPLATES:
+            risk_level = "ERROR"
+            
         template = self.RESPONSE_TEMPLATES[risk_level]
 
         header = f"{template['emoji']} {template['level']}"
@@ -172,7 +179,7 @@ class TelegramBot:
                 status_url = f"{API_BACKEND_URL.replace('/scan', '/scan/status')}/{job_id}"
                 
                 attempts = 0
-                max_time = 60
+                max_time = 360  # Increased to 6 mins to account for dual browser + VT polling
                 start_time = asyncio.get_running_loop().time()
                 
                 while (asyncio.get_running_loop().time() - start_time) < max_time:
@@ -190,7 +197,8 @@ class TelegramBot:
                             if status == "completed":
                                 final_response = self.response_formatter.format_combined_response(
                                     status_data.get("url", text), 
-                                    status_data.get("results", {})
+                                    status_data.get("results", {}),
+                                    final_verdict=status_data.get("final_verdict")
                                 )
                                 await proc_msg.edit_text(final_response, parse_mode='HTML')
                                 return
