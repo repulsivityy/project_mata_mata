@@ -40,9 +40,9 @@ class ScanOrchestrator:
         import logging
         logger = logging.getLogger(__name__)
 
-        vt = results_map.get("VirusTotal", {})
-        wr = results_map.get("Google Web Risk", {})
-        ai = results_map.get("AI Analysis", {})
+        vt = results_map.get(VirusTotalChecker.SOURCE_NAME, {})
+        wr = results_map.get(WebRiskChecker.SOURCE_NAME, {})
+        ai = results_map.get(AIImageChecker.SOURCE_NAME, {})
 
         vt_factors = vt.get("risk_factors", {})
         wr_factors = wr.get("risk_factors", {})
@@ -55,6 +55,11 @@ class ScanOrchestrator:
         # Determine specific states
         gti_is_malicious = (gti_score is not None and gti_score > 60) or gti_verdict == "VERDICT_MALICIOUS" or gti_verdict == "malicious"
         wr_is_malicious = wr_factors.get("has_high_threat", False)
+        
+        # 0. Fast-path: Definite threat from Web Risk
+        if wr_is_malicious:
+            logger.info("⚖️ Verdict: DANGER (High-confidence threat from Web Risk)")
+            return "DANGER"
         
         # Condition 1: (GTI or Web Risk)
         cond1 = gti_is_malicious or wr_is_malicious
@@ -181,7 +186,7 @@ class ScanOrchestrator:
                                     "summary": "❌ Cancelled due to confirmed threat", 
                                     "error": False
                                 }
-                                if s_name == "VirusTotal":
+                                if s_name == VirusTotalChecker.SOURCE_NAME:
                                     results_map["GTI Assessment"] = {
                                         "is_malicious": False,
                                         "summary": "❌ Cancelled due to confirmed threat",
