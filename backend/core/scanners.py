@@ -300,10 +300,12 @@ class VirusTotalChecker(BaseChecker):
 #####################
 # Checks against Google Web Risk
 #####################
-class WebRiskChecker(BaseChecker):
+def get_threat_types():
+    return ["SOCIAL_ENGINEERING", "MALWARE", "UNWANTED_SOFTWARE"]
+
+class WebRiskEvalChecker(BaseChecker):
     SOURCE_NAME = "Google Web Risk"
     BASE_URL = "https://webrisk.googleapis.com/v1eap1:evaluateUri"
-    THREAT_TYPES = ["SOCIAL_ENGINEERING", "MALWARE", "UNWANTED_SOFTWARE"]
     THREAT_NAMES = {"MALWARE": "Malware", "SOCIAL_ENGINEERING": "Social Engineering", "UNWANTED_SOFTWARE": "Unwanted Software"}
 
     def __init__(self, api_key: str, session: aiohttp.ClientSession):
@@ -343,8 +345,44 @@ class WebRiskChecker(BaseChecker):
     async def check(self, value: str, item_type: str) -> ScanResult:
         url_to_check = value if item_type == 'url' else f"http://{value}"
         try:
-            payload = {"uri": url_to_check, "threatTypes": self.THREAT_TYPES}
+            payload = {"uri": url_to_check, "threatTypes": get_threat_types()}
             async with self.session.post(f"{self.BASE_URL}?key={self.api_key}", json=payload, timeout=API_TIMEOUT) as response:
+                response.raise_for_status()
+                return self._parse_results(await response.json())
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            logger.error(f"{self.SOURCE_NAME} error for {value}: {e}")
+            return ScanResult(False, "API Error", self.SOURCE_NAME, error=True)
+
+
+class WebRiskLookupChecker(BaseChecker):
+    SOURCE_NAME = "Google Web Risk Lookup"
+    BASE_URL = "https://webrisk.googleapis.com/v1/uris:search"
+
+    def __init__(self, api_key: str, session: aiohttp.ClientSession):
+        super().__init__(session)
+        self.api_key = api_key
+
+    def _parse_results(self, wr_data: Dict) -> ScanResult:
+        threat = wr_data.get("threat")
+        if not threat:
+            return ScanResult(False, "SAFE", self.SOURCE_NAME, risk_factors={"verdict": "Clean"})
+        
+        threat_types = threat.get("threatTypes", [])
+        summary = f"Threats: {', '.join(threat_types)}"
+        
+        is_malicious = len(threat_types) > 0
+        verdict = "Malicious" if is_malicious else "Clean"
+        
+        return ScanResult(is_malicious, summary, self.SOURCE_NAME, details={"threat_types": threat_types}, risk_factors={"verdict": verdict})
+
+    async def check(self, value: str, item_type: str) -> ScanResult:
+        url_to_check = value if item_type == 'url' else f"http://{value}"
+        try:
+            params = [('threatTypes', tt) for tt in get_threat_types()]
+            params.append(('uri', url_to_check))
+            params.append(('key', self.api_key))
+            
+            async with self.session.get(self.BASE_URL, params=params, timeout=API_TIMEOUT) as response:
                 response.raise_for_status()
                 return self._parse_results(await response.json())
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:

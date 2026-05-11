@@ -6,7 +6,7 @@ import os
 
 from backend.core.models import ScanResult
 from backend.core.extractors import URLExtractor
-from backend.core.scanners import BaseChecker, VirusTotalChecker, WebRiskChecker, AIImageChecker
+from backend.core.scanners import BaseChecker, VirusTotalChecker, WebRiskEvalChecker, WebRiskLookupChecker, AIImageChecker
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ class ScanOrchestrator:
         logger = logging.getLogger(__name__)
 
         vt = results_map.get(VirusTotalChecker.SOURCE_NAME, {})
-        wr = results_map.get(WebRiskChecker.SOURCE_NAME, {})
+        wr = results_map.get(WebRiskEvalChecker.SOURCE_NAME, {})
         ai = results_map.get(AIImageChecker.SOURCE_NAME, {})
 
         vt_factors = vt.get("risk_factors", {})
@@ -98,7 +98,8 @@ class ScanOrchestrator:
         if VIRUSTOTAL_API_KEY and not VIRUSTOTAL_API_KEY.startswith("YOUR_"):
             checkers.append(VirusTotalChecker(VIRUSTOTAL_API_KEY, session, threshold=vt_threshold))
         if WEBRISK_API_KEY and not WEBRISK_API_KEY.startswith("YOUR_"):
-            checkers.append(WebRiskChecker(WEBRISK_API_KEY, session))
+            checkers.append(WebRiskEvalChecker(WEBRISK_API_KEY, session))
+            checkers.append(WebRiskLookupChecker(WEBRISK_API_KEY, session))
             
         checkers.append(AIImageChecker())
 
@@ -174,7 +175,7 @@ class ScanOrchestrator:
 
                 # Check for Web Risk early exit condition
                 if allow_early_cancel:
-                    wr_result = results_map.get(WebRiskChecker.SOURCE_NAME)
+                    wr_result = results_map.get(WebRiskEvalChecker.SOURCE_NAME)
                     if wr_result and wr_result.get("risk_factors", {}).get("has_high_threat"):
                         logger.warning(f"High-confidence threat from Web Risk for {item_value}. Cancelling remaining tasks.")
                         for p_task in pending_tasks:
