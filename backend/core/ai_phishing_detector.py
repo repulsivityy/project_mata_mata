@@ -24,7 +24,7 @@ import asyncio
 API_KEY = os.environ.get("GEMINI_APIKEY")
 if not API_KEY:
     raise ValueError("GEMINI_APIKEY environment variable not set. Please set it before running the script.")
-GEMINI_MODEL = "gemini-3-flash-preview" # Model for image understanding
+GEMINI_MODEL = "gemini-3.5-flash" # Model for image understanding
 GEMINI_API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={API_KEY}"
 
 # 1. Default user agents 
@@ -412,14 +412,52 @@ async def create_browser_context(browser, browser_type: str, user_agent: str, is
     
     if browser_type == "chromium":
         context_options['extra_http_headers'] = {
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
             'Accept-Language': 'en-US,en;q=0.9',
             'DNT': '1',
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1'
         }
+    elif browser_type == "firefox":
+        context_options['extra_http_headers'] = {
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+        }
     
-    return await browser.new_context(**context_options)
+    context = await browser.new_context(**context_options)
+    
+    # Bot evasion and fingerprint overrides
+    stealth_script = """
+        // 1. Hide webdriver property
+        Object.defineProperty(navigator, 'webdriver', {
+            get: () => undefined
+        });
+    """
+    
+    if browser_type == "chromium":
+        stealth_script += """
+            // 2. Mock Chrome runtime properties
+            window.chrome = {
+                runtime: {},
+                loadTimes: function() {},
+                csi: function() {},
+                app: {}
+            };
+            
+            // 3. Mock Permissions API if it has webdriver detection
+            const originalQuery = window.navigator.permissions.query;
+            window.navigator.permissions.query = (parameters) => (
+                parameters.name === 'notifications' ?
+                    Promise.resolve({ state: Notification.permission }) :
+                    originalQuery.call(window.navigator.permissions, parameters)
+            );
+        """
+        
+    await context.add_init_script(stealth_script)
+    return context
 
 async def handle_security_warnings(page, browser_type: str):
     """
