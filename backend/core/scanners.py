@@ -390,6 +390,123 @@ class WebRiskLookupChecker(BaseChecker):
             return ScanResult(False, "API Error", self.SOURCE_NAME, error=True)
 
 
+class WhoisChecker(BaseChecker):
+    SOURCE_NAME = "WHOIS Registry"
+    BASE_URL = "https://rdap.org/domain"
+
+    def __init__(self, session: aiohttp.ClientSession):
+        super().__init__(session)
+
+    def _extract_registered_domain(self, hostname: str) -> str:
+        hostname = hostname.lower().strip()
+        if ":" in hostname:
+            hostname = hostname.split(":")[0]
+            
+        parts = hostname.split('.')
+        if len(parts) <= 2:
+            return hostname
+            
+        double_tlds = {
+            'co.uk', 'org.uk', 'me.uk', 'ltd.uk', 'plc.uk', 'net.uk',
+            'com.sg', 'net.sg', 'org.sg', 'edu.sg', 'gov.sg',
+            'com.au', 'net.au', 'org.au', 'edu.au', 'gov.au',
+            'co.jp', 'org.jp', 'net.jp', 'ad.jp',
+            'com.br', 'net.br', 'org.br',
+            'co.za', 'org.za', 'net.za',
+            'com.cn', 'net.cn', 'org.cn', 'gov.cn',
+            'co.in', 'in.net', 'org.in', 'net.in',
+            'com.hk', 'net.hk', 'org.hk', 'edu.hk', 'gov.hk',
+            'com.tw', 'net.tw', 'org.tw',
+            'com.my', 'net.my', 'org.my',
+            'co.id', 'web.id', 'net.id', 'or.id',
+            'com.th', 'net.th', 'org.th',
+            'com.vn', 'net.vn', 'org.vn',
+            'com.ph', 'net.ph', 'org.ph'
+        }
+        
+        last_two = ".".join(parts[-2:])
+        if last_two in double_tlds and len(parts) >= 3:
+            return ".".join(parts[-3:])
+            
+        return ".".join(parts[-2:])
+
+    def _parse_results(self, rdap_data: Dict) -> ScanResult:
+        from datetime import datetime, timezone
+        
+        events = rdap_data.get("events", [])
+        registration_date_str = None
+        for event in events:
+            if event.get("eventAction") == "registration":
+                registration_date_str = event.get("eventDate")
+                break
+                
+        registrar = "Unknown"
+        for entity in rdap_data.get("entities", []):
+            if "roles" in entity and "registrar" in entity["roles"]:
+                vcard = entity.get("vcardArray", [])
+                if len(vcard) > 1:
+                    properties = vcard[1]
+                    for prop in properties:
+                        if len(prop) > 3 and prop[0] == "fn":
+                            registrar = prop[3]
+                            break
+        
+        if not registration_date_str:
+            return ScanResult(False, f"Domain registered (Date unavailable) via {registrar}", self.SOURCE_NAME, details={"registrar": registrar})
+            
+        try:
+            clean_date_str = registration_date_str.split('T')[0]
+            creation_date = datetime.strptime(clean_date_str, "%Y-%m-%d")
+            
+            now = datetime.now()
+            age_days = (now - creation_date).days
+            
+            summary = f"Age: {age_days} days (Registered {clean_date_str}) via {registrar}"
+            
+            # Flag domains registered less than 30 days ago as suspicious
+            is_suspicious = age_days < 30
+            verdict = "Suspicious" if is_suspicious else "Clean"
+            
+            details = {
+                "registration_date": clean_date_str,
+                "registrar": registrar,
+                "age_days": age_days,
+                "is_new_domain": is_suspicious
+            }
+            
+            risk_factors = {
+                "verdict": verdict,
+                "is_new_domain": is_suspicious
+            }
+            
+            return ScanResult(False, summary, self.SOURCE_NAME, details=details, risk_factors=risk_factors)
+        except Exception as e:
+            logger.error(f"Error parsing registration date '{registration_date_str}': {e}")
+            return ScanResult(False, f"Registered via {registrar} (Error parsing age)", self.SOURCE_NAME, details={"registrar": registrar}, error=True)
+
+    async def check(self, value: str, item_type: str) -> ScanResult:
+        if item_type == 'domain':
+            domain = value
+        elif item_type == 'url':
+            parsed = urllib.parse.urlparse(value)
+            domain = parsed.netloc or parsed.path
+        else:
+            return ScanResult(False, "Skipped (not a domain or URL)", self.SOURCE_NAME)
+            
+        registered_domain = self._extract_registered_domain(domain)
+        endpoint = f"{self.BASE_URL}/{registered_domain}"
+        
+        try:
+            async with self.session.get(endpoint, timeout=API_TIMEOUT) as response:
+                if response.status == 404:
+                    return ScanResult(False, "Domain registration data not found (404)", self.SOURCE_NAME, risk_factors={"verdict": "Suspicious"})
+                response.raise_for_status()
+                return self._parse_results(await response.json())
+        except Exception as e:
+            logger.error(f"RDAP lookup failed for {registered_domain}: {e}")
+            return ScanResult(False, f"RDAP query failed: {str(e)}", self.SOURCE_NAME, error=True)
+
+
 #####################
 # Checks screenshot against Gemini AI
 #####################

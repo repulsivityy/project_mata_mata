@@ -99,6 +99,7 @@ async def perform_scan(job_id: str, url: str, item_type: str, vt_threshold: int,
             "results": {
                 "VirusTotal": {"summary": "Still analyzing...", "is_pending": True, "error": False},
                 "Google Web Risk": {"summary": "Still analyzing...", "is_pending": True, "error": False},
+                "WHOIS Registry": {"summary": "Still analyzing...", "is_pending": True, "error": False},
                 "AI Analysis": {"summary": "Still analyzing...", "is_pending": True, "error": False}
             },
             "url": url,
@@ -112,6 +113,7 @@ async def perform_scan(job_id: str, url: str, item_type: str, vt_threshold: int,
             merged_results = {
                 "VirusTotal": {"summary": "Still analyzing...", "is_pending": True, "error": False},
                 "Google Web Risk": {"summary": "Still analyzing...", "is_pending": True, "error": False},
+                "WHOIS Registry": {"summary": "Still analyzing...", "is_pending": True, "error": False},
                 "AI Analysis": {"summary": "Still analyzing...", "is_pending": True, "error": False}
             }
             merged_results.update(current_results)

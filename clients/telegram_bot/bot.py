@@ -77,6 +77,7 @@ class ResponseFormatter:
         gti_result = results_map.get("GTI Assessment", {"error": True, "summary": "Not run", "risk_factors": {}})
         wr_result = results_map.get("Google Web Risk", {"error": True, "summary": "Not run", "risk_factors": {}})
         ai_result = results_map.get("AI Analysis", {"error": True, "summary": "Not run", "risk_factors": {}})
+        whois_result = results_map.get("WHOIS Registry", {"error": True, "summary": "Not run", "risk_factors": {}})
 
         if final_verdict:
             risk_level = final_verdict
@@ -110,6 +111,7 @@ class ResponseFormatter:
             pass
             
         details_lines.append(f"Google Web Risk: {wr_result.get('summary')}")
+        details_lines.append(f"WHOIS Registry: {whois_result.get('summary')}")
         details_lines.append(f"AI Analysis: {ai_result.get('summary')}")
 
         details_section = "\n".join(filter(None, details_lines))
