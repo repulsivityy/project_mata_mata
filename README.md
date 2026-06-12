@@ -29,7 +29,7 @@ To prevent abuse and protect sensitive threat intelligence keys, Project Mata-Ma
 ## Core Scanners
 - **VirusTotal**: Checks raw static community detections and Google Threat Intelligence (GTI) scoring. (Note: Falls back to standard VT scoring if the API key lacks GTI access; requires `x-tool: project-mata-mata` header for tracking).
 - **Google Web Risk**: Evaluates domains against global blacklists.
-- **Gemini 2.5 Multi-Modal Agent**: Renders Chromium headless instances behind Cloudflare shields to analyze visual DOM spoofing, inline hidden scripts, and exfiltrated background network POSTs.
+- **Gemini 3.5 Flash Multi-Modal Agent**: Renders Chromium headless instances behind Cloudflare shields to analyze visual DOM spoofing, inline hidden scripts, and exfiltrated background network POSTs.
 
 ## 🔄 Job Polling & Caching
 - **Firestore Integration**: Results are cached in Google Cloud Firestore (`mata_mata_scans`), keyed by the SHA-256 hash of the URL. Identical scans share results and save API quota!
@@ -129,6 +129,6 @@ gcloud builds list --region=asia-southeast1 --limit=5
 ### Roadmap
 - [ ] Implement WHOIS Registration
 - [ ] Implement URLScan Results
-- [x] Upgrade to Gemini 3.0 Flash
+- [x] Upgrade to Gemini 3.5 Flash
 - [ ] Add ability to submit to Webrisk (Enterprise)
 - [ ] Link analysis engine to [Project Harimau](https://github.com/repulsivityy/project_harimau)
