@@ -85,7 +85,7 @@ graph TD
 ### 2. `backend/core/` (The Heavy Business Engine)
 - **`orchestrator.py`**: Manages the multi-processing threads and captures responses. If Google Web Risk surfaces a deterministic "High Threat" early, the Orchestrator can cancel parallel scrapes to conserve API credits (controlled by the `allow_early_cancel` parameter, which defaults to `False` to favor full corroboration for metrics systems). The Telegram Bot explicitly overrides this to `True` for speed.
 - **`scanners.py`**: Wrappers for VirusTotal static vendor checks, thresholds, and Google Threat Intelligence (GTI) heuristics. (Note: Supports fallback to standard VT scoring if the API key lacks GTI access; requires `x-tool: project-mata-mata` header for tracking).
-- **`ai_phishing_detector.py`**: Spawns independent unshielded headless instances to grab screenshot binary streams + intercept in-line Javascript payload dumps. This payload is shipped straight to **Gemini 2.5 Multi-Modal API** for context inference.
+- **`ai_phishing_detector.py`**: Spawns research-optimized headless instances to capture screenshot binary streams, intercept runtime background network requests (POST/PUT/PATCH), and fetch the cleaned DOM tree. It uses advanced Playwright bot-evasion scripts (spoofing Permissions APIs, hiding webdriver flags, and aligning user-agent specific headers) to bypass Cloudflare/crawler blocks. Prompts are externalized under the `prompts/` sub-directory as markdown files, and the compiled context payload is analyzed by the **Gemini 3.5 Flash Multi-Modal API** for phishing detection.
 
 ### 3. `clients/telegram_bot/` (The Conversational Consumer)
 - Decoupled `python-telegram-bot` script listening to messages and defanging standalone IP addresses.

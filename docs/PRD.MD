@@ -5,7 +5,7 @@
 *A cross-platform, multi-agent AI phishing detection ecosystem.*
 
 ## 2. Overview
-Project Mata-Mata is the evolution of the monolithic `telegram_url_checker`. It serves as a unified SaaS-style backend designed to detect sophisticated phishing campaigns, impersonation, and fraudulent URLs by combining static Threat Intelligence APIs (VirusTotal, Google Web Risk) with dynamic, headless dual-browser visualization and Gemini 2.5 Pro multi-modal analysis. 
+Project Mata-Mata is the evolution of the monolithic `telegram_url_checker`. It serves as a unified SaaS-style backend designed to detect sophisticated phishing campaigns, impersonation, and fraudulent URLs by combining static Threat Intelligence APIs (VirusTotal, Google Web Risk) with dynamic, headless dual-browser visualization and Gemini 3.5 Flash multi-modal analysis. 
 
 The monolithic system is heavily refactored into a scalable API to service downstream clients such as Telegram Bots, Web Dashboards, and third-party services.
 

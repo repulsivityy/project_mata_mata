@@ -11,11 +11,13 @@ project_mata_mata/
 ├── backend/                  # The FastAPI Brain (Port :8000)
 │   ├── api/                  # API Routers mapping endpoints
 │   ├── core/                 # Scanners (VT, Web Risk, Gemini) & Orchestrator
+│   │   └── prompts/          # Externalized system prompt templates (Markdown)
 │   └── Dockerfile            # Configured natively for Python & Playwright
 ├── clients/
 │   ├── telegram_bot/         # Lightweight bot hitting the FastAPI
 │   └── web_frontend/         # Next.js React Threat Dashboard (Port :3000)
 ├── terraform/                # Infrastructure as Code (including Firestore)
+│   └── firestore.tf          # Provisioning Firestore database/rules
 └── docker-compose.yml        # Orchestrates all 3 platforms seamlessly
 ```
 
