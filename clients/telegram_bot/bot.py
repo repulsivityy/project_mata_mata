@@ -177,6 +177,7 @@ class TelegramBot:
                 
                 # 2. Polling loop
                 await proc_msg.edit_text(f"🔍 Scan job created. Polling for results...", parse_mode='HTML')
+                last_msg_text = f"🔍 Scan job created. Polling for results..."
                 
                 status_url = f"{API_BACKEND_URL.replace('/scan', '/scan/status')}/{job_id}"
                 
@@ -202,7 +203,8 @@ class TelegramBot:
                                     status_data.get("results", {}),
                                     final_verdict=status_data.get("final_verdict")
                                 )
-                                await proc_msg.edit_text(final_response, parse_mode='HTML')
+                                if final_response != last_msg_text:
+                                    await proc_msg.edit_text(final_response, parse_mode='HTML')
                                 return
                             elif status == "failed":
                                 error_msg = status_data.get("error", "Unknown error")
@@ -215,7 +217,9 @@ class TelegramBot:
                                     status_data.get("url", text), 
                                     status_data.get("results", {})
                                 )
-                                await proc_msg.edit_text(intermediate_response, parse_mode='HTML')
+                                if intermediate_response != last_msg_text:
+                                    await proc_msg.edit_text(intermediate_response, parse_mode='HTML')
+                                    last_msg_text = intermediate_response
                         else:
                             # HTTP error on status check
                             await proc_msg.edit_text(f"⚠️ Warning: Status check failed (HTTP {status_resp.status}). Retrying...", parse_mode='HTML')
