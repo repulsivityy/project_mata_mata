@@ -6,7 +6,7 @@ import os
 
 from backend.core.models import ScanResult
 from backend.core.extractors import URLExtractor
-from backend.core.scanners import BaseChecker, VirusTotalChecker, WebRiskEvalChecker, WebRiskLookupChecker, AIImageChecker, WhoisChecker
+from backend.core.scanners import BaseChecker, VirusTotalChecker, WebRiskEvalChecker, WebRiskLookupChecker, AIImageChecker
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +101,6 @@ class ScanOrchestrator:
             checkers.append(WebRiskEvalChecker(WEBRISK_API_KEY, session))
             checkers.append(WebRiskLookupChecker(WEBRISK_API_KEY, session))
             
-        checkers.append(WhoisChecker(session))
         checkers.append(AIImageChecker())
 
         results_map = {}
