@@ -311,6 +311,7 @@ class WebRiskEvalChecker(BaseChecker):
     def __init__(self, api_key: str, session: aiohttp.ClientSession):
         super().__init__(session)
         self.api_key = api_key
+        self.headers = {"X-Goog-Api-Key": self.api_key}
 
     def _parse_results(self, wr_data: Dict) -> ScanResult:
         if not wr_data or "scores" not in wr_data: 
@@ -346,11 +347,12 @@ class WebRiskEvalChecker(BaseChecker):
         url_to_check = value if item_type == 'url' else f"http://{value}"
         try:
             payload = {"uri": url_to_check, "threatTypes": get_threat_types()}
-            async with self.session.post(f"{self.BASE_URL}?key={self.api_key}", json=payload, timeout=API_TIMEOUT) as response:
+            async with self.session.post(self.BASE_URL, headers=self.headers, json=payload, timeout=API_TIMEOUT) as response:
                 response.raise_for_status()
                 return self._parse_results(await response.json())
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-            logger.error(f"{self.SOURCE_NAME} error for {value}: {e}")
+            status = getattr(e, "status", type(e).__name__)
+            logger.error(f"{self.SOURCE_NAME} error for {value} (status: {status})")
             return ScanResult(False, "API Error", self.SOURCE_NAME, error=True)
 
 
@@ -361,6 +363,7 @@ class WebRiskLookupChecker(BaseChecker):
     def __init__(self, api_key: str, session: aiohttp.ClientSession):
         super().__init__(session)
         self.api_key = api_key
+        self.headers = {"X-Goog-Api-Key": self.api_key}
 
     def _parse_results(self, wr_data: Dict) -> ScanResult:
         threat = wr_data.get("threat")
@@ -380,13 +383,13 @@ class WebRiskLookupChecker(BaseChecker):
         try:
             params = [('threatTypes', tt) for tt in get_threat_types()]
             params.append(('uri', url_to_check))
-            params.append(('key', self.api_key))
             
-            async with self.session.get(self.BASE_URL, params=params, timeout=API_TIMEOUT) as response:
+            async with self.session.get(self.BASE_URL, headers=self.headers, params=params, timeout=API_TIMEOUT) as response:
                 response.raise_for_status()
                 return self._parse_results(await response.json())
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-            logger.error(f"{self.SOURCE_NAME} error for {value}: {e}")
+            status = getattr(e, "status", type(e).__name__)
+            logger.error(f"{self.SOURCE_NAME} error for {value} (status: {status})")
             return ScanResult(False, "API Error", self.SOURCE_NAME, error=True)
 
 

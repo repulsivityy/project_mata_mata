@@ -25,7 +25,7 @@ API_KEY = os.environ.get("GEMINI_APIKEY")
 if not API_KEY:
     raise ValueError("GEMINI_APIKEY environment variable not set. Please set it before running the script.")
 GEMINI_MODEL = "gemini-3.5-flash" # Model for image understanding
-GEMINI_API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={API_KEY}"
+GEMINI_API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 
 # 1. Default user agents 
 DEFAULT_USER_AGENTS = ["firefox_windows", "chrome_windows", "chrome_android", "chrome_mac"]
@@ -637,7 +637,10 @@ def identify_with_gemini_dual(screenshot1_bytes: bytes, screenshot2_bytes: bytes
     try:
         base64_image1 = base64.b64encode(screenshot1_bytes).decode('utf-8')
         base64_image2 = base64.b64encode(screenshot2_bytes).decode('utf-8')
-        headers = {'Content-Type': 'application/json'}
+        headers = {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': API_KEY
+        }
 
         # Create comparative technical summary
         technical_summary = f"""
@@ -715,11 +718,12 @@ def identify_with_gemini_dual(screenshot1_bytes: bytes, screenshot2_bytes: bytes
         return "Could not get a clear dual analysis from the AI."
 
     except requests.exceptions.RequestException as e:
-        print(f"Error during dual AI analysis: {e}")
-        return f"Dual AI analysis failed: {e}"
-    except Exception as e:
-        print(f"Unexpected error in dual analysis: {e}")
-        return f"Dual analysis error: {e}"
+        status_code = e.response.status_code if getattr(e, 'response', None) is not None else "unknown"
+        print(f"Error during dual AI analysis (HTTP {status_code})")
+        return f"Dual AI analysis failed (HTTP {status_code})."
+    except Exception:
+        print("Unexpected error in dual analysis")
+        return "Dual analysis failed due to an unexpected internal error."
 
 async def analyze_with_smart_dual_ai(target_url: str, browser_results: dict, debug_mode: bool = False) -> str:
     """
@@ -994,7 +998,10 @@ def identify_with_gemini(image_bytes: bytes, webpage_url: str, dom_data: dict, p
     print(f"Sending image, DOM data, and HTML content to Gemini API for '{webpage_url}'")
     try:
         base64_image = base64.b64encode(image_bytes).decode('utf-8')
-        headers = {'Content-Type': 'application/json'}
+        headers = {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': API_KEY
+        }
 
         # ENHANCED: Create comprehensive technical analysis section
         links = dom_data.get('links', [])
@@ -1101,14 +1108,12 @@ def identify_with_gemini(image_bytes: bytes, webpage_url: str, dom_data: dict, p
             return "Could not get a clear identification from the AI (missing 'candidates')."
 
     except requests.exceptions.RequestException as e:
-        print(f"Error during API request: {e}")
-        if hasattr(e, 'response') and e.response:
-            print(f"Response status code: {e.response.status_code}")
-            print(f"Response content: {e.response.text}")
-        return f"API request failed: {e}"
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        return f"An error occurred: {e}"
+        status_code = e.response.status_code if getattr(e, 'response', None) is not None else "unknown"
+        print(f"Error during Gemini API request (HTTP {status_code})")
+        return f"API request failed (HTTP {status_code})."
+    except Exception:
+        print("An unexpected error occurred during Gemini API analysis")
+        return "AI analysis failed due to an unexpected internal error."
 
 # Updated main analysis function with smart hybrid approach
 async def analyze_url_for_phishing(target_url: str, debug_mode: bool = False) -> str:
