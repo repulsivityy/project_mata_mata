@@ -7,7 +7,7 @@
 #
 # Code is provided as best effort. Use at your own risk
 # Author: dominicchua@
-# Version 2.5 - Implemented AI Analysis for Network Requests (PATCH, PUT, POST)
+# Version 2.6 - Fixed error handling and API client headers, updated to Gemini 3.8 flash
 #############
 
 import base64
