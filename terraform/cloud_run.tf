@@ -73,7 +73,7 @@ resource "google_cloud_run_v2_service" "frontend" {
     containers {
       image = "us-docker.pkg.dev/cloudrun/container/hello:latest"
       env {
-        name  = "NEXT_PUBLIC_API_URL"
+        name  = "API_URL"
         value = "${google_cloud_run_v2_service.backend.uri}/api/v1/scan"
       }
       env {

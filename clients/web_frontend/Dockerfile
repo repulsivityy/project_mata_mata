@@ -10,7 +10,6 @@ RUN npm install
 COPY . .
 
 # Build Next.js
-ARG NEXT_PUBLIC_API_URL
 RUN npm run build
 
 # Production Stage

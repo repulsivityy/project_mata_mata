@@ -4,14 +4,12 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const apiKey = process.env.MATA_API_KEY;
-    const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1/scan';
+    const apiUrl = process.env.API_URL || 'http://localhost:8000/api/v1/scan';
 
     if (!apiKey) {
       console.error("❌ MATA_API_KEY is not set on the Next.js server!");
       return NextResponse.json({ detail: "Server misconfiguration: MATA_API_KEY is not set on the server." }, { status: 500 });
     }
-
-    console.log(`📡 Proxying request to: ${apiUrl}`);
 
     const res = await fetch(apiUrl, {
       method: 'POST',
@@ -28,13 +26,12 @@ export async function POST(request: Request) {
       const data = await res.json();
       return NextResponse.json(data, { status: res.status });
     } else {
-      const text = await res.text();
-      console.error(`❌ Backend returned non-JSON response: ${text}`);
+      console.error(`❌ Backend returned non-JSON response (HTTP ${res.status})`);
       return NextResponse.json({ detail: "Backend returned an invalid response format." }, { status: 500 });
     }
   } catch (error: any) {
-    console.error(`❌ Proxy error: ${error.message}`);
-    return NextResponse.json({ detail: error.message || "Failed to proxy request" }, { status: 500 });
+    console.error("❌ Proxy POST error");
+    return NextResponse.json({ detail: "Failed to proxy request" }, { status: 500 });
   }
 }
 
@@ -43,8 +40,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const jobId = searchParams.get('job_id');
     const apiKey = process.env.MATA_API_KEY;
-    const apiUrlBase = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1/scan';
-    const statusUrl = `${apiUrlBase.replace('/scan', '/scan/status')}/${jobId}`;
+    const apiUrlBase = process.env.API_URL || 'http://localhost:8000/api/v1/scan';
+    const statusUrl = `${apiUrlBase.replace('/scan', '/scan/status')}/${encodeURIComponent(jobId || '')}`;
 
     if (!jobId) {
       return NextResponse.json({ detail: "Missing job_id parameter" }, { status: 400 });
@@ -53,8 +50,6 @@ export async function GET(request: Request) {
     if (!apiKey) {
       return NextResponse.json({ detail: "Server misconfiguration: MATA_API_KEY is not set on the server." }, { status: 500 });
     }
-
-    console.log(`📡 GET Proxying status request to: ${statusUrl}`);
 
     const res = await fetch(statusUrl, {
       method: 'GET',
@@ -69,12 +64,11 @@ export async function GET(request: Request) {
       const data = await res.json();
       return NextResponse.json(data, { status: res.status });
     } else {
-      const text = await res.text();
-      console.error(`❌ Backend returned non-JSON response for GET status: ${text}`);
+      console.error(`❌ Backend returned non-JSON response for GET status (HTTP ${res.status})`);
       return NextResponse.json({ detail: "Backend returned an invalid response format." }, { status: 500 });
     }
   } catch (error: any) {
-    console.error(`❌ GET Proxy error: ${error.message}`);
-    return NextResponse.json({ detail: error.message || "Failed to proxy request" }, { status: 500 });
+    console.error("❌ GET Proxy error");
+    return NextResponse.json({ detail: "Failed to proxy request" }, { status: 500 });
   }
 }

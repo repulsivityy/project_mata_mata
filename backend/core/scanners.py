@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 # Constants
 MALICIOUS_THRESHOLD = 5
 API_TIMEOUT = 10
-DEBUG_MODE = True
+DEBUG_MODE = os.environ.get("DEBUG_MODE", "false").lower() == "true"
 
 VT_POLLING_SCHEDULE = [15, 15, 30, 30, 60]
 VT_POLLING_DEFAULT_INTERVAL = 30
@@ -456,7 +456,7 @@ class AIImageChecker(BaseChecker):
             return ScanResult(is_malicious, summary, self.SOURCE_NAME, details=details, risk_factors={"ai_risk": risk_level})
 
         summary = "Could not determine risk level from AI response (JSON parsing failed)."
-        return ScanResult(False, summary, self.SOURCE_NAME, details=details, error=True)
+        return ScanResult(False, summary, self.SOURCE_NAME, details={}, error=True)
 
     async def check(self, value: str, item_type: str) -> ScanResult:
         """Runs the AI analysis with debug mode passed from global setting."""

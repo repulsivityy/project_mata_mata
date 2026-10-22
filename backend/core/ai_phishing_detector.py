@@ -11,12 +11,61 @@
 #############
 
 import base64
+import ipaddress
 import requests
 import json
 import os
+import re
 import urllib.parse
 from playwright.async_api import async_playwright
 import asyncio
+
+BLOCKED_HOSTNAMES = {
+    "localhost",
+    "localhost.localdomain",
+    "metadata",
+    "metadata.google.internal",
+    "metadata.goog",
+}
+BLOCKED_SUFFIXES = (".internal", ".local", ".localhost", ".home.arpa")
+
+# Only intercept requests targeting file://, metadata servers, or literal private/loopback/link-local IPs
+BLOCKED_BROWSER_REQUEST_REGEX = re.compile(
+    r"^(file:|https?://("
+    r"localhost(?::|/|$)|"
+    r"metadata(?:\.google\.internal|\.goog)?(?::|/|$)|"
+    r"[^/]*\.internal(?::|/|$)|"
+    r"127\.\d+\.\d+\.\d+|"
+    r"10\.\d+\.\d+\.\d+|"
+    r"192\.168\.\d+\.\d+|"
+    r"172\.(?:1[6-9]|2\d|3[0-1])\.\d+\.\d+|"
+    r"169\.254\.\d+\.\d+|"
+    r"0\.0\.0\.0|"
+    r"\[::1\]"
+    r"))",
+    re.IGNORECASE,
+)
+
+
+def _is_safe_public_host(hostname: str) -> bool:
+    if not hostname:
+        return False
+    host = hostname.strip().lower().rstrip(".")
+    if not host or host in BLOCKED_HOSTNAMES or host.endswith(BLOCKED_SUFFIXES):
+        return False
+
+    try:
+        ip_obj = ipaddress.ip_address(host)
+        return ip_obj.is_global and not (
+            ip_obj.is_private
+            or ip_obj.is_loopback
+            or ip_obj.is_link_local
+            or ip_obj.is_multicast
+            or ip_obj.is_reserved
+            or ip_obj.is_unspecified
+        )
+    except ValueError:
+        return True
 
 ################
 # Configuration
@@ -52,16 +101,22 @@ PROMPT_DUAL_ANALYSIS = load_prompt("dual_analysis.md")
 
 def normalize_url(url: str) -> str:
     """
-    Ensures URL has proper protocol prefix.
+    Ensures URL has proper protocol prefix and blocks non-http(s) schemes or private/local hosts.
     """
     url = url.strip()
-    
-    # If it already has a protocol, return as-is
-    if url.startswith(('http://', 'https://')):
-        return url
-    
-    # Add https:// as default
-    return f"https://{url}"
+
+    scheme_match = re.match(r'^([a-zA-Z][a-zA-Z0-9+.-]*):', url)
+    if scheme_match and scheme_match.group(1).lower() not in ('http', 'https'):
+        raise ValueError("Unsupported URL scheme. Only http and https are allowed.")
+
+    if not url.lower().startswith(('http://', 'https://')):
+        url = f"https://{url}"
+
+    parsed = urllib.parse.urlparse(url)
+    if not _is_safe_public_host(parsed.hostname or ""):
+        raise ValueError("Target URL resolves to a blocked private, local, or internal address.")
+
+    return url
 
 # Dual Browser Integration - Firefox + Chromium with user agents
 USER_AGENTS_WITH_BROWSERS = {
@@ -189,7 +244,10 @@ async def launch_browser_for_research(p, browser_type: str):
             # Performance and Resource
             '--metrics-recording-only',
             '--no-crash-upload',
-            '--no-pings'
+            '--no-pings',
+
+            # Block internal metadata & localhost resolution at socket layer
+            '--host-resolver-rules=MAP metadata.google.internal 0.0.0.0, MAP metadata 0.0.0.0, MAP *.internal 0.0.0.0, MAP localhost 0.0.0.0'
         ]
         return await p.chromium.launch(headless=True, args=bypass_args)
     
@@ -227,6 +285,12 @@ async def create_browser_context(browser, browser_type: str, user_agent: str, is
         }
     
     context = await browser.new_context(**context_options)
+
+    async def _block_unsafe_requests(route):
+        print(f"🛑 Blocked internal/metadata browser request: {route.request.url[:100]}")
+        await route.abort("blockedbyclient")
+
+    await context.route(BLOCKED_BROWSER_REQUEST_REGEX, _block_unsafe_requests)
     
     # Bot evasion and fingerprint overrides
     stealth_script = """
@@ -1146,8 +1210,8 @@ async def analyze_url_for_phishing(target_url: str, debug_mode: bool = False) ->
         print(f"AI analysis for {target_url} timed out after {AI_ANALYSIS_TIMEOUT} seconds.")
         return "[TIMED OUT] Smart hybrid analysis timed out. This can happen with complex websites or dual analysis."
     except Exception as e:
-        print(f"\nSmart hybrid analysis failed with error: {e}")
-        return f"[ERROR] Smart hybrid analysis failed: {e}"
+        print(f"\nSmart hybrid analysis failed with error: {type(e).__name__}")
+        return "[ERROR] Smart hybrid analysis failed due to an internal error."
 
 # --- Main Execution (only runs when script is executed directly) ---
 if __name__ == "__main__":

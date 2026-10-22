@@ -88,8 +88,7 @@ gcloud run deploy mata-frontend \
   --source ./clients/web_frontend \
   --region $REGION \
   --allow-unauthenticated \
-  --set-build-env-vars NEXT_PUBLIC_API_URL="${BACKEND_URL}/api/v1/scan" \
-  --set-env-vars NEXT_PUBLIC_API_URL="${BACKEND_URL}/api/v1/scan" \
+  --set-env-vars API_URL="${BACKEND_URL}/api/v1/scan" \
   --set-secrets="MATA_API_KEY=MATA_API_KEY:latest"
 
 echo "✅ Web Frontend deployment complete."

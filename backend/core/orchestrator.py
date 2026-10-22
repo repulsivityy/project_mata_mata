@@ -203,6 +203,6 @@ class ScanOrchestrator:
             }
 
         except Exception as e:
-            logger.error(f"Error in orchestrator for {item_value}: {e}")
-            return {"url": item_value, "error": str(e)}
+            logger.error(f"Error in orchestrator for {item_value}: {type(e).__name__}")
+            return {"url": item_value, "error": "An internal error occurred during scan orchestration."}
 

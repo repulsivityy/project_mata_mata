@@ -130,11 +130,10 @@ async def perform_scan(job_id: str, url: str, item_type: str, vt_threshold: int,
         logger.info(f"Job {job_id} completed and saved to Firestore.")
         
     except Exception as e:
-        logger.error(f"Background scan failed for job {job_id}: {e}")
+        logger.error(f"Background scan failed for job {job_id}: {type(e).__name__}")
         await doc_ref.set({
             "status": "failed",
             "error": "An internal error occurred during analysis.",
-            "internal_error": str(e),
             "expireAt": datetime.utcnow() + timedelta(hours=1)
         }, merge=True)
 
@@ -177,7 +176,7 @@ async def scan_url(request: ScanRequest, background_tasks: BackgroundTasks):
     
     return ScanJobResponse(job_id=job_id, status="in_progress")
 
-@app.get("/api/v1/scan/status/{job_id}")
+@app.get("/api/v1/scan/status/{job_id}", dependencies=[Depends(verify_api_key)])
 async def get_scan_status(job_id: str):
     doc_ref = firestore_client.collection("mata_mata_scans").document(job_id)
     doc = await doc_ref.get()

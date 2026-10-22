@@ -31,6 +31,8 @@ def get_api_key_from_secret_manager():
 MATA_API_KEY = os.environ.get("MATA_API_KEY") or get_api_key_from_secret_manager()
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+# httpx logs every request URL at INFO; Telegram puts the bot token in the URL path
+logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 class ResponseFormatter:
@@ -190,7 +192,7 @@ class TelegramBot:
                     delay = 2 if attempts <= 10 else 5
                     await asyncio.sleep(delay)
                     
-                    async with session.get(status_url) as status_resp:
+                    async with session.get(status_url, headers=headers) as status_resp:
                         if status_resp.status == 200:
                             status_data = await status_resp.json()
                             status = status_data.get("status")
