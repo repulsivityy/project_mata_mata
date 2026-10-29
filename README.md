@@ -51,19 +51,20 @@ The engine uses a compound priority logic with a deterministic Web Risk fast-pat
 
 ## How To Run Locally (Docker)
 
-To test Project Mata-Mata on any local VM, simply populate your private API keys in a `.env` file at the root:
+To test Project Mata-Mata locally, populate your private API keys in a `.env` file at the root (and ensure GCP Application Default Credentials are active via `gcloud auth application-default login` so the backend can access Secret Manager and Firestore):
 
 ```env
+PROJECT_ID=your_gcp_project_id
 TELEGRAM_TOKEN=your_bot_token_here
 VIRUSTOTAL_API_KEY=your_vt_key
 WEBRISK_API_KEY=your_webrisk_key
 GEMINI_APIKEY=your_gemini_key
 MATA_API_KEY=your_internal_secret_key
 DEBUG_MODE=false
-PORT=8080 # Dummy port binder for serverless platforms run health checks (Cloud Run)
+PORT=8080 # Dummy port binder for serverless health checks (Cloud Run)
 ```
 
-Then, execute Docker Compose to automatically build the Playwright backend, boot the Telegram agent, and compile the Next.js React Web portal:
+Then, execute Docker Compose to build the Playwright backend, boot the Telegram agent, and compile the Next.js React Web portal:
 
 ```bash
 docker-compose up --build -d
@@ -72,7 +73,7 @@ docker-compose up --build -d
 - **Threat Dashboard**: `http://localhost:3000`
 - **FastAPI Specs**: `http://localhost:8000/docs`
 - **Telegram Bot**: Listens to chat payloads and polls the FastAPI backend.
-- **Custom Integrations (Third-Party Systems)**: The API schema accepts a JSON POST body. It defaults to full scanning (`allow_early_cancel = False`) to get full metrics corroboration.
+- **Custom Integrations (Third-Party Systems)**: Send a `POST` request to `/api/v1/scan` with the `X-API-KEY` header (defaults to `allow_early_cancel = false` for full metrics corroboration). This returns `{ "job_id": "...", "status": "..." }`, which you then poll via `GET /api/v1/scan/status/{job_id}` (also with `X-API-KEY`) until `status` is `"completed"`.
   ```json
   {
     "url": "https://suspicious-link.com",
@@ -134,9 +135,9 @@ gcloud builds list --region=asia-southeast1 --limit=5
 
 
 ### Roadmap
-- [ ] Implement WHOIS Registration
+- ~~[ ] Implement WHOIS Registration~~ # too noisy 
 - [ ] Implement URLScan Results
 - [x] Upgrade to Gemini 3.8 Flash
 - [x] Implement GTI URL Screenshots
-- [ ] Add ability to submit to Webrisk (Enterprise)
+- ~~[ ] Add ability to submit to Webrisk (Enterprise)~~ # not in the roadmap
 - [ ] Link analysis engine to [Project Harimau](https://github.com/repulsivityy/project_harimau)
