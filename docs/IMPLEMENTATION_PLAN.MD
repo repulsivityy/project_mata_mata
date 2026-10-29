@@ -17,15 +17,15 @@ Instead of refactoring the old `telegram_url_checker` monolithic platform in pla
 2. Load it securely with the new production `TELEGRAM_TOKEN`.
 3. Update it to use asynchronous polling to support the new Firestore queue, enabling live updates tracking partial results. Add standard HTTP dummy server on `$PORT` to prevent serverless deployment closures on Cloud Run.
 
-## Phase 4: Build the Web Frontend Platform
-1. Create a modern web interface in `clients/web_frontend/` using React or Next.js.
-2. Architect an immersive dark-mode Threat Intelligence Dashboard featuring neon accents, radar-style loader aesthetics, and crisp tabular views of AI logic findings.
-3. Have it call the identical API router logic.
+## Phase 4: Build the Web Frontend Platform (COMPLETED)
+1. Create a modern web interface in `clients/web_frontend/` using Next.js and React.
+2. Architect a Neo-Brutalist Threat Intelligence Dashboard featuring verdict banners, scanner breakdown cards, and expandable GTI URL screenshot modals.
+3. Route browser requests through a server-side Next.js BFF proxy (`/api/scan`) to keep `MATA_API_KEY` off the client.
 
-## Phase 5: Containerization & Cloud-Native Deployment (Docker)
+## Phase 5: Containerization & Cloud-Native Deployment (COMPLETED)
 1. Build `Dockerfile` configurations specifically optimizing for the installation of heavy system dependencies like `playwright` binaries within the `backend/`.
 2. Supply a root `docker-compose.yml` defining the API Backend, Telegram Client, and NextJS UI running as native services side-by-side.
-3. Verify that the structure natively translates for immediate production deployments via **Google Cloud Run** and **GKE**.
+3. Provision automated CI/CD and serverless infrastructure via **Terraform**, **Cloud Build**, and **Google Cloud Run**.
 
 ## Phase 6: Async Polling & Firestore Caching (COMPLETED)
 1. Transition API from blocking requests to job-based background workers to resolve mobile browser timeouts.

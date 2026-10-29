@@ -8,17 +8,22 @@ The platform is strictly decoupled into a powerful unified API and its independe
 
 ```text
 project_mata_mata/
-├── backend/                  # The FastAPI Brain (Port :8000)
-│   ├── api/                  # API Routers mapping endpoints
-│   ├── core/                 # Scanners (VT, Web Risk, Gemini) & Orchestrator
+├── backend/                  # FastAPI Orchestrator & Scanners (Port :8000)
+│   ├── api/                  # FastAPI endpoints, HMAC auth & Firestore jobs
+│   ├── core/                 # Scanners (VT/GTI, Web Risk, Gemini) & Orchestrator
 │   │   └── prompts/          # Externalized system prompt templates (Markdown)
-│   └── Dockerfile            # Configured natively for Python & Playwright
+│   ├── Dockerfile            # Configured for Python & Playwright (Chromium + Firefox)
+│   └── cloudbuild.yaml       # Cloud Build manifest for backend container
 ├── clients/
-│   ├── telegram_bot/         # Lightweight bot hitting the FastAPI
-│   └── web_frontend/         # Next.js React Threat Dashboard (Port :3000)
-├── terraform/                # Infrastructure as Code (including Firestore)
-│   └── firestore.tf          # Provisioning Firestore database/rules
-└── docker-compose.yml        # Orchestrates all 3 platforms seamlessly
+│   ├── telegram_bot/         # Lightweight Telegram polling client + cloudbuild.yaml
+│   └── web_frontend/         # Next.js Threat Dashboard (Port :3000)
+│       ├── app/api/scan/     # Server-side BFF proxy injecting X-API-KEY
+│       └── cloudbuild.yaml   # Cloud Build manifest for frontend container
+├── docs/                     # Architecture, Agents, PRD & Implementation docs
+├── terraform/                # GCP IaC (Cloud Run, Cloud Build, Firestore, Secrets, AR)
+├── deploy.sh                 # Manual Cloud Run deployment & secret sync script
+├── push_secrets.sh           # Replicates local .env keys to GCP Secret Manager
+└── docker-compose.yml        # Local multi-container compose config
 ```
 
 ## 🔐 Security & API Authentication
@@ -29,9 +34,9 @@ To prevent abuse and protect sensitive threat intelligence keys, Project Mata-Ma
 - **Fail-Hard Resolution**: On startup, the backend attempts to fetch the raw `MATA_API_KEY` from Google Secret Manager. If it is missing or unreachable, the server crashes intentionally on start ("Fail Hard") to avoid running in an unauthenticated exposure state.
 
 ## Core Scanners
-- **VirusTotal**: Checks raw static community detections and Google Threat Intelligence (GTI) scoring. (Note: Falls back to standard VT scoring if the API key lacks GTI access; requires `x-tool: project-mata-mata` header for tracking).
+- **VirusTotal & GTI**: Checks raw static community detections, Google Threat Intelligence (GTI) scoring, and retrieves short-lived signed URL analysis screenshots (`GET /api/v3/urls/{id}/screenshot_url` for URL targets). When available, the Web Dashboard renders an expandable screenshot card (automatically hidden if unavailable or once the 5-minute signed URL expires). Falls back to standard VT scoring if the API key lacks GTI access; requires `x-tool: project-mata-mata` header for tracking.
 - **Google Web Risk**: Evaluates domains against global blacklists.
-- **Gemini 3.5 Flash Multi-Modal Agent**: Renders Chromium headless instances behind Cloudflare shields to analyze visual DOM spoofing, inline hidden scripts, and exfiltrated background network POSTs.
+- **Gemini 3.8 Flash Multi-Modal Agent**: Renders dual headless browser instances (Chromium + Firefox) behind Cloudflare shields to analyze visual DOM spoofing, inline hidden scripts, and exfiltrated background network POSTs.
 
 ## 🔄 Job Polling & Caching
 - **Firestore Integration**: Results are cached in Google Cloud Firestore (`mata_mata_scans`), keyed by the SHA-256 hash of the URL. Identical scans share results and save API quota!
@@ -39,9 +44,9 @@ To prevent abuse and protect sensitive threat intelligence keys, Project Mata-Ma
 
 ## ⚖️ Final Verdict Scoring
 
-The engine uses a compound priority logic that requires corroboration for high-severity flags:
-- **🔴 DANGER**: Requires both a Core Intel hit (GTI/Web Risk) **AND** a Verification hit (AI High or VT detections > 5).
-- **🟢 SAFE**: Requires a clean indicator (GTI Benign or Web Risk Safe) **AND** exactly `0` detections.
+The engine uses a compound priority logic with a deterministic Web Risk fast-path and corroboration for GTI flags:
+- **🔴 DANGER**: Triggered immediately by a high-confidence **Google Web Risk** threat, **OR** when **GTI** flags the target (`gti_score > 60` or `VERDICT_MALICIOUS`) **AND** a Verification hit corroborates it (`AI High` or `VT detections >= threshold`).
+- **🟢 SAFE**: Requires a clean indicator (`GTI Benign` or `Web Risk Safe`) **AND** exactly `0` VT detections.
 - **🟡 WARNING**: The fallback state for any link failing both tests above.
 
 ## How To Run Locally (Docker)
@@ -131,6 +136,7 @@ gcloud builds list --region=asia-southeast1 --limit=5
 ### Roadmap
 - [ ] Implement WHOIS Registration
 - [ ] Implement URLScan Results
-- [x] Upgrade to Gemini 3.5 Flash
+- [x] Upgrade to Gemini 3.8 Flash
+- [x] Implement GTI URL Screenshots
 - [ ] Add ability to submit to Webrisk (Enterprise)
 - [ ] Link analysis engine to [Project Harimau](https://github.com/repulsivityy/project_harimau)

@@ -22,5 +22,5 @@ Project Mata-Mata relies heavily on an agentic architecture rather than simple s
 **Role:** Individual API Scraper Modules
 **Responsibilities:**
 - **URL Extractor**: Parses and scrapes bulk text dumps from Telegram or the Web to isolate isolated IPs, Domains, and URLs reliably.
-- **VT Scanner**: Packages and hashes queried URLs securely.
+- **VT Scanner**: Packages and Base64-encodes queried URLs securely, retrieves GTI assessments, and fetches short-lived signed URL screenshots (`/urls/{id}/screenshot_url`) when available.
 - **Web Risk Scanner**: Maps domains to known blacklists.

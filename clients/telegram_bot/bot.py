@@ -66,8 +66,8 @@ class ResponseFormatter:
             return "ERROR"
 
         # 4. Success/Safe check
-        if (gti_factors.get("gti_verdict") == "VERDICT_HARMLESS" or 
-            (wr_factors.get("is_clean")) and 
+        if ((gti_factors.get("gti_verdict") in ("VERDICT_BENIGN", "VERDICT_HARMLESS", "benign") or 
+            wr_factors.get("is_clean")) and 
             (vt_factors.get("classic_score") == 0)):
             return "SAFE"
             

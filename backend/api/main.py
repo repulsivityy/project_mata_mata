@@ -77,6 +77,7 @@ class ScanResponse(BaseModel):
     type: str
     results: dict
     final_verdict: str
+    screenshot_url: str | None = None
 
 class ScanJobResponse(BaseModel):
     job_id: str
@@ -115,18 +116,25 @@ async def perform_scan(job_id: str, url: str, item_type: str, vt_threshold: int,
                 "AI Analysis": {"summary": "Still analyzing...", "is_pending": True, "error": False}
             }
             merged_results.update(current_results)
-            await doc_ref.update({"results": merged_results})
+            update_payload = {"results": merged_results}
+            partial_screenshot = current_results.get("VirusTotal", {}).get("details", {}).get("screenshot_url")
+            if partial_screenshot:
+                update_payload["screenshot_url"] = partial_screenshot
+            await doc_ref.update(update_payload)
             logger.info(f"Job {job_id} updated with partial results.")
 
         # 3. Run the scan with callback
         report = await orchestrator.scan_url(url, item_type, vt_threshold=vt_threshold, allow_early_cancel=allow_early_cancel, on_update_callback=on_update)
         
         # 4. Save final completed state
-        await doc_ref.update({
+        final_update = {
             "status": "completed",
             "results": report.get("results", {}),
             "final_verdict": report.get("final_verdict", "UNKNOWN")
-        })
+        }
+        if report.get("screenshot_url"):
+            final_update["screenshot_url"] = report["screenshot_url"]
+        await doc_ref.update(final_update)
         logger.info(f"Job {job_id} completed and saved to Firestore.")
         
     except Exception as e:

@@ -47,7 +47,8 @@ graph TD
     
     %% Polling & Streaming
     Telegram -->|2. Poll Status| Status
-    WebUI -->|3. Poll Status| Status
+    WebUI -->|3. Poll Status| Proxy
+    Proxy -->|4. HTTP GET| Status
     Status -->|Read Live Status| FS
     
     %% Internal Routing
@@ -84,16 +85,16 @@ graph TD
 
 ### 2. `backend/core/` (The Heavy Business Engine)
 - **`orchestrator.py`**: Manages the multi-processing threads and captures responses. If Google Web Risk surfaces a deterministic "High Threat" early, the Orchestrator can cancel parallel scrapes to conserve API credits (controlled by the `allow_early_cancel` parameter, which defaults to `False` to favor full corroboration for metrics systems). The Telegram Bot explicitly overrides this to `True` for speed.
-- **`scanners.py`**: Wrappers for VirusTotal static vendor checks, thresholds, and Google Threat Intelligence (GTI) heuristics. (Note: Supports fallback to standard VT scoring if the API key lacks GTI access; requires `x-tool: project-mata-mata` header for tracking).
-- **`ai_phishing_detector.py`**: Spawns research-optimized headless instances to capture screenshot binary streams, intercept runtime background network requests (POST/PUT/PATCH), and fetch the cleaned DOM tree. It uses advanced Playwright bot-evasion scripts (spoofing Permissions APIs, hiding webdriver flags, and aligning user-agent specific headers) to bypass Cloudflare/crawler blocks. Prompts are externalized under the `prompts/` sub-directory as markdown files, and the compiled context payload is analyzed by the **Gemini 3.5 Flash Multi-Modal API** for phishing detection.
+- **`scanners.py`**: Wrappers for VirusTotal static vendor checks, thresholds, Google Threat Intelligence (GTI) heuristics, and GTI URL screenshot retrieval (`GET /api/v3/urls/{id}/screenshot_url`, fetched strictly for `url` targets when available and validated as `https://`). Supports fallback to standard VT scoring if the API key lacks GTI access; requires `x-tool: project-mata-mata` header for tracking.
+- **`ai_phishing_detector.py`**: Spawns research-optimized headless instances to capture screenshot binary streams, intercept runtime background network requests (POST/PUT/PATCH), and fetch the cleaned DOM tree. It uses advanced Playwright bot-evasion scripts (spoofing Permissions APIs, hiding webdriver flags, and aligning user-agent specific headers) to bypass Cloudflare/crawler blocks. Prompts are externalized under the `prompts/` sub-directory as markdown files, and the compiled context payload is analyzed by the **Gemini 3.8 Flash Multi-Modal API** for phishing detection.
 
 ### 3. `clients/telegram_bot/` (The Conversational Consumer)
 - Decoupled `python-telegram-bot` script listening to messages and defanging standalone IP addresses.
 - It doesn't run Python `playwright` directly—it just queries the centralized FastAPI `Scan Orchestrator`, takes the JSON results, and formats them back into Telegram HTML cards.
 
 ### 4. `clients/web_frontend/` (The Unified UI Dashboard)
-- A highly stylized Dark-mode Single Page Application targeting Next.js React libraries.
-- Features neon threat indicators, a radar spinner, and beautiful tabular drill-downs of the scanner JSON outputs.
+- A Neo-Brutalist Single Page Application targeting Next.js React libraries.
+- Features threat verdict banners, scanner breakdown cards, and a conditional **GTI URL Screenshot** card inside the 2-column results grid that expands into a full-resolution modal on click (and automatically hides itself if no screenshot exists or if the 5-minute signed GCS URL has expired).
 - **BFF Proxy**: Includes a server-side API route (`app/api/scan/route.ts`) that acts as a secure Backend-for-Frontend proxy, protecting the master `MATA_API_KEY` from being exposed to the browser.
 
 ### 5. `Data / Persistence` (State Layer)
@@ -104,14 +105,14 @@ graph TD
 
 ## ⚖️ Scoring Logic & Final Verdict
 
-The `Orchestrator` computes a unified final verdict (`DANGER`, `WARNING`, `SAFE`) based on a compound priority logic that requires corroboration for high-severity flags:
+The `Orchestrator` computes a unified final verdict (`DANGER`, `WARNING`, `SAFE`) using a deterministic Web Risk fast-path and corroboration logic:
 
-- **🔴 DANGER**: Requires at least one **Core Intel** indicator AND at least one **Verification** indicator to be true.
-  - *Core Intel*: Google TI (`gti_score > 60` or `gti_verdict` is malicious) OR Web Risk flags it as malicious.
-  - *Verification*: AI Analysis identifies it as high risk OR VirusTotal detections breach the threshold (`> 5`).
+- **🔴 DANGER**:
+  - *Fast-path*: Google Web Risk flags a high-confidence threat (`HIGH` or `EXTREMELY_HIGH`).
+  - *Corroborated GTI*: Google TI flags the target (`gti_score > 60` or `VERDICT_MALICIOUS`) **AND** at least one Verification indicator fires (`AI Analysis` is high risk OR `VirusTotal` detections `>=` threshold).
 - **🟢 SAFE**: Requires a clean indicator AND no active community detections.
-  - *Conditions*: (`gti_verdict` is benign OR Web Risk module flags it as safe) **AND** VirusTotal must have exactly `0` detections.
-- **🟡 WARNING**: The fallback state for any link failing both tests above. It implies that at least one engine raised a suspicion but it lacked sufficient corroboration to be marked as `DANGER`.
+  - *Conditions*: (`gti_verdict` is benign/harmless OR Web Risk module flags it as safe) **AND** VirusTotal must have exactly `0` detections.
+- **🟡 WARNING**: The fallback state for any link failing both tests above. It implies that at least one engine raised a suspicion or lacked sufficient corroboration to be marked `DANGER` or `SAFE`.
 
 ---
 
@@ -120,12 +121,12 @@ The `Orchestrator` computes a unified final verdict (`DANGER`, `WARNING`, `SAFE`
 > [!NOTE]
 > The lifecycle of a scan looks like this:
 
-1. **Submit**: Client ships URL to FastAPI.
-2. **Normalize**: Backend normalizes query (stripping hex, un-obfuscating defanged URL links).
-3. **Dispatch**: Concurrent execution across VT, Web Risk, and Playwright Scrapers.
-4. **Scraping (Heavy)**: If using Playwright, a hidden chromium tab renders the exact site the victim sees, grabbing outbound `POST`/`PUT`/`PATCH` telemetry drops.
-5. **AI Evaluation**: Screenshot is combined with isolated inline code strings and examined by Gemini.
-6. **Output**: The finalized JSON response merges (Visual Scores + Threat Intel Scores) back to the UI.
+1. **Submit**: Client ships URL to FastAPI (via Next.js BFF `/api/scan` or Telegram Bot with `X-API-KEY`).
+2. **Extract & Validate**: `URLExtractor` isolates the target URL/domain, enforces `http`/`https` schemes, and blocks private/loopback/metadata SSRF hosts (`is_safe_http_url`).
+3. **Dispatch**: Concurrent execution across VT/GTI (including URL screenshot lookup for `url` targets), Web Risk, and Playwright Scrapers.
+4. **Scraping (Heavy)**: Dual headless browsers (Chromium + Firefox) render the target site asynchronously, grabbing screenshots, cleaned DOM, and outbound `POST`/`PUT`/`PATCH` telemetry drops.
+5. **AI Evaluation**: Screenshots are combined with isolated inline code strings and examined by Gemini 3.8 Flash.
+6. **Output**: The finalized JSON response merges visual scores, threat intel scores, and optional `screenshot_url` into Firestore for UI polling.
 
 ---
 

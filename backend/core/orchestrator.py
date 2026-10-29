@@ -78,7 +78,7 @@ class ScanOrchestrator:
 
         # 2. SAFE
         wr_is_safe = wr_factors.get("is_clean", False)
-        gti_is_benign = gti_verdict == "VERDICT_HARMLESS" or gti_verdict == "benign"
+        gti_is_benign = gti_verdict in ("VERDICT_BENIGN", "VERDICT_HARMLESS", "benign")
         
         if (gti_is_benign or wr_is_safe) and vt_detections == 0:
             logger.info("⚖️ Verdict: SAFE")
@@ -160,9 +160,13 @@ class ScanOrchestrator:
                         if result.source == VirusTotalChecker.SOURCE_NAME and result.is_pending:
                             vt_checker = next((c for c in checkers if isinstance(c, VirusTotalChecker)), None)
                             analysis_id = result.details.get("analysis_id")
+                            url_identifier = result.details.get("url_identifier")
                             if vt_checker and analysis_id:
                                 # Start a polling task
-                                polling_task = asyncio.create_task(vt_checker.poll_for_result(analysis_id), name=VirusTotalChecker.SOURCE_NAME)
+                                polling_task = asyncio.create_task(
+                                    vt_checker.poll_for_result(analysis_id, url_identifier=url_identifier),
+                                    name=VirusTotalChecker.SOURCE_NAME,
+                                )
                                 pending_tasks.add(polling_task)
 
                     except Exception as e:
@@ -195,12 +199,20 @@ class ScanOrchestrator:
                                     }
                         break # Exit early
 
-            return {
+            screenshot_url = (
+                results_map.get(VirusTotalChecker.SOURCE_NAME, {})
+                .get("details", {})
+                .get("screenshot_url")
+            )
+            report = {
                 "url": item_value,
                 "type": item_type,
                 "results": results_map,
                 "final_verdict": self._compute_final_verdict(results_map)
             }
+            if screenshot_url:
+                report["screenshot_url"] = screenshot_url
+            return report
 
         except Exception as e:
             logger.error(f"Error in orchestrator for {item_value}: {type(e).__name__}")

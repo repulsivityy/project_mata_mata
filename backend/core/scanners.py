@@ -161,6 +161,35 @@ class VirusTotalChecker(BaseChecker):
         logger.info(f"Built stats from {len(last_analysis_results)} engines: {stats}")
         return stats
 
+    async def _fetch_screenshot_url(self, url_identifier: str) -> Optional[str]:
+        """Fetches the short-lived signed PNG screenshot URL for a GTI URL identifier if available."""
+        if not url_identifier:
+            return None
+
+        screenshot_endpoint = f"{self.BASE_URL}/urls/{url_identifier}/screenshot_url"
+        try:
+            async with await self._make_request(screenshot_endpoint) as response:
+                if response.status != 200:
+                    if DEBUG_MODE:
+                        logger.info(f"🔍 VT Screenshot unavailable (HTTP {response.status}) for {url_identifier}")
+                    return None
+
+                payload = await response.json()
+                screenshot_url = payload.get("data") if isinstance(payload, dict) else None
+                if not isinstance(screenshot_url, str) or not screenshot_url:
+                    return None
+
+                parsed = urllib.parse.urlparse(screenshot_url)
+                if parsed.scheme.lower() != "https" or not parsed.netloc:
+                    logger.warning("Rejected non-HTTPS screenshot URL returned by VT API")
+                    return None
+
+                return screenshot_url
+        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as e:
+            if DEBUG_MODE:
+                logger.info(f"🔍 VT Screenshot fetch skipped for {url_identifier}: {type(e).__name__}")
+            return None
+
     async def check(self, value: str, item_type: str) -> ScanResult:
         try:
             endpoint_path = "urls" if item_type == "url" else "domains"
@@ -180,7 +209,7 @@ class VirusTotalChecker(BaseChecker):
                 if response.status == 404:
                     if DEBUG_MODE:
                         logger.info(f"🔍 VT 404 - submitting URL for analysis")
-                    return await self._submit_url(value) if item_type == 'url' else ScanResult(False, "Not found", self.SOURCE_NAME)
+                    return await self._submit_url(value, identifier) if item_type == 'url' else ScanResult(False, "Not found", self.SOURCE_NAME)
                 
                 response.raise_for_status()
                 response_data = await response.json()
@@ -189,13 +218,22 @@ class VirusTotalChecker(BaseChecker):
                 if DEBUG_MODE:
                     logger.info(f"🔍 VT Response size: {len(str(response_data))} chars")
                 
-                return self._parse_results(response_data)
+                result = self._parse_results(response_data)
+                if item_type == "url":
+                    if result.is_pending:
+                        result.details["url_identifier"] = identifier
+                    elif not result.error:
+                        screenshot_url = await self._fetch_screenshot_url(identifier)
+                        if screenshot_url:
+                            result.details["screenshot_url"] = screenshot_url
+
+                return result
                 
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             logger.error(f"{self.SOURCE_NAME} error for {value}: {e}")
             return ScanResult(False, "API Error", self.SOURCE_NAME, error=True)
 
-    async def _submit_url(self, url: str) -> ScanResult:
+    async def _submit_url(self, url: str, url_identifier: Optional[str] = None) -> ScanResult:
         try:
             submit_endpoint = f"{self.BASE_URL}/urls"
             payload = aiohttp.FormData()
@@ -207,18 +245,21 @@ class VirusTotalChecker(BaseChecker):
                 analysis_id = (await response.json()).get("data", {}).get("id")
                 if not analysis_id: 
                     return ScanResult(False, "Submission failed", self.SOURCE_NAME, error=True)
+                details = {"analysis_id": analysis_id}
+                if url_identifier:
+                    details["url_identifier"] = url_identifier
                 return ScanResult(
                     False, 
                     "⏳ Submitted for analysis...", 
                     self.SOURCE_NAME, 
-                    details={"analysis_id": analysis_id}, 
+                    details=details, 
                     is_pending=True
                 )
         except Exception as e:
             logger.error(f"Error during URL submission for {url}: {e}")
             return ScanResult(False, "API Error on submit", self.SOURCE_NAME, error=True)
 
-    async def poll_for_result(self, analysis_id: str) -> ScanResult:
+    async def poll_for_result(self, analysis_id: str, url_identifier: Optional[str] = None) -> ScanResult:
         """Uses VT status to make intelligent decisions"""
         analysis_endpoint = f"{self.BASE_URL}/analyses/{analysis_id}"
         start_time = asyncio.get_running_loop().time()
@@ -243,7 +284,13 @@ class VirusTotalChecker(BaseChecker):
                         
                         if status == "completed":
                             logger.info(f"Analysis {analysis_id} complete after {attempt} attempts.")
-                            return self._parse_results(analysis_data)
+                            result = self._parse_results(analysis_data)
+                            resolved_id = url_identifier or analysis_data.get("meta", {}).get("url_info", {}).get("id")
+                            if resolved_id and not result.error:
+                                screenshot_url = await self._fetch_screenshot_url(resolved_id)
+                                if screenshot_url:
+                                    result.details["screenshot_url"] = screenshot_url
+                            return result
                         
                         elif status == "queued":
                             logger.info(f"Analysis {analysis_id} still queued (attempt {attempt}/7)")

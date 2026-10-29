@@ -2,6 +2,17 @@
 
 import React, { useState, useEffect } from 'react'
 
+function getSafeScreenshotUrl(rawUrl: unknown): string | null {
+  if (typeof rawUrl !== 'string' || !rawUrl) return null
+  try {
+    const parsed = new URL(rawUrl)
+    if (parsed.protocol !== 'https:') return null
+    return parsed.toString()
+  } catch {
+    return null
+  }
+}
+
 export default function MataMataDashboard() {
   const [url, setUrl] = useState('')
   const [threshold, setThreshold] = useState('5')
@@ -9,6 +20,8 @@ export default function MataMataDashboard() {
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState('')
   const [jobId, setJobId] = useState('')
+  const [screenshotError, setScreenshotError] = useState(false)
+  const [screenshotExpanded, setScreenshotExpanded] = useState(false)
 
   const handleScan = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -16,6 +29,8 @@ export default function MataMataDashboard() {
     setLoading(true)
     setError('')
     setResult(null)
+    setScreenshotError(false)
+    setScreenshotExpanded(false)
 
     try {
       const res = await fetch('/api/scan', {
@@ -55,6 +70,8 @@ export default function MataMataDashboard() {
         const data = await res.json()
         
         if (data.status === 'completed') {
+          setScreenshotError(false)
+          setScreenshotExpanded(false)
           setResult(data)
           setLoading(false)
           clearInterval(interval)
@@ -74,6 +91,20 @@ export default function MataMataDashboard() {
 
     return () => clearInterval(interval)
   }, [jobId])
+
+  useEffect(() => {
+    if (!screenshotExpanded) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setScreenshotExpanded(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [screenshotExpanded])
+
+  const screenshotUrl = getSafeScreenshotUrl(
+    result?.screenshot_url ?? result?.results?.VirusTotal?.details?.screenshot_url
+  )
+  const showScreenshot = Boolean(screenshotUrl && !screenshotError)
 
   return (
     <main className="w-full max-w-7xl mx-auto p-4 md:p-8 relative flex flex-col items-center">
@@ -253,7 +284,81 @@ export default function MataMataDashboard() {
               </div>
             ))}
 
-            {/* Dedicated card for GTI Verdict removed since backend now provides unified GTI Assessment */}
+            {showScreenshot && screenshotUrl && (
+              <div
+                onClick={() => setScreenshotExpanded(true)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setScreenshotExpanded(true)
+                  }
+                }}
+                aria-label="Expand GTI URL Screenshot"
+                className="bg-white p-4 md:p-6 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer group flex flex-col"
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-xl font-bold text-black">GTI URL Screenshot</h3>
+                  <span className="px-3 py-1 text-xs font-bold bg-[#00ffff] text-black border-2 border-black group-hover:bg-[#ffff00] transition-colors">
+                    Click to Expand ⤢
+                  </span>
+                </div>
+                <div className="border-2 border-black bg-gray-100 overflow-hidden max-h-56 flex items-center justify-center">
+                  <img
+                    src={screenshotUrl}
+                    alt="Latest GTI URL analysis screenshot"
+                    referrerPolicy="no-referrer"
+                    onError={() => {
+                      setScreenshotError(true)
+                      setScreenshotExpanded(false)
+                    }}
+                    className="w-full h-full object-cover object-top"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Expandable Screenshot Modal */}
+      {screenshotExpanded && showScreenshot && screenshotUrl && (
+        <div
+          onClick={() => setScreenshotExpanded(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Expanded GTI URL Screenshot"
+          className="fixed inset-0 z-50 bg-black/80 p-4 md:p-8 flex items-center justify-center"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-w-5xl w-full max-h-[90vh] flex flex-col"
+          >
+            <div className="flex justify-between items-center p-4 border-b-4 border-black bg-[#ffff00]">
+              <h3 className="text-lg md:text-xl font-black uppercase tracking-wider text-black">
+                GTI URL Screenshot
+              </h3>
+              <button
+                type="button"
+                onClick={() => setScreenshotExpanded(false)}
+                className="px-3 py-1 bg-[#ff007f] text-white font-black text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all"
+              >
+                CLOSE [X]
+              </button>
+            </div>
+            <div className="p-4 overflow-auto bg-gray-100 flex justify-center">
+              <img
+                src={screenshotUrl}
+                alt="Expanded GTI URL analysis screenshot"
+                referrerPolicy="no-referrer"
+                onError={() => {
+                  setScreenshotError(true)
+                  setScreenshotExpanded(false)
+                }}
+                className="max-w-full h-auto border-2 border-black"
+              />
+            </div>
           </div>
         </div>
       )}
