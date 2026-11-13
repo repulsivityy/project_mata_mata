@@ -73,7 +73,7 @@ def _is_safe_public_host(hostname: str) -> bool:
 API_KEY = os.environ.get("GEMINI_APIKEY")
 if not API_KEY:
     raise ValueError("GEMINI_APIKEY environment variable not set. Please set it before running the script.")
-GEMINI_MODEL = "gemini-3.8-flash" # Model for image understanding
+GEMINI_MODEL = "gemini-4-hydrogen" # Model for image understanding
 GEMINI_API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 
 # 1. Default user agents 
