@@ -81,6 +81,7 @@ docker-compose up --build -d
     "allow_early_cancel": false
   }
   ```
+- **AI-Only Synchronous Scan (`/api/v1/scan/ai`)**: For external consumers (like Project Harimau) that already query VirusTotal/GTI and Web Risk independently, send `POST /api/v1/scan/ai` with `X-API-KEY` and `{"url": "https://suspicious-link.com"}`. Runs only the headless Chromium/Firefox + Gemini phishing detector synchronously (zero Firestore storage) and returns `reachable`, `http_status`, `final_url`, `reachability_reason`, `ai_result`, and `final_verdict` (`DANGER` / `WARNING` / `SAFE` / `UNREACHABLE` / `ERROR`).
 
 ## 🚀 Production Deployment (Terraform + Cloud Build)
 

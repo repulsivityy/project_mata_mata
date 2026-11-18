@@ -8,7 +8,7 @@ from typing import Dict, Optional
 import urllib.parse
 from backend.core.models import ScanResult
 from backend.core.base import BaseChecker
-from backend.core.ai_phishing_detector import analyze_url_for_phishing # We ported ai_phishing_detector
+from backend.core.ai_phishing_detector import analyze_url_for_phishing, analyze_url_for_phishing_structured # We ported ai_phishing_detector
 
 logger = logging.getLogger(__name__)
 
@@ -517,11 +517,64 @@ class AIImageChecker(BaseChecker):
             return ScanResult(False, f"Skipped (not a URL or domain)", self.SOURCE_NAME)
 
         try:
-            # Pass the current DEBUG_MODE to the AI analysis function
-            analysis_result_string = await analyze_url_for_phishing(url_to_check, debug_mode=DEBUG_MODE)
-            return self._parse_results(analysis_result_string)
+            structured = await analyze_url_for_phishing_structured(url_to_check, debug_mode=DEBUG_MODE)
+            reachable = bool(structured.get("reachable", False))
+            http_status = structured.get("http_status")
+            http_status_text = structured.get("http_status_text")
+            final_url = structured.get("final_url")
+            reachability_reason = structured.get("reachability_reason")
+            analysis_text = structured.get("analysis_text") or ""
+
+            nav_meta = {
+                "reachable": reachable,
+                "http_status": http_status,
+                "http_status_text": http_status_text,
+                "final_url": final_url,
+                "reachability_reason": reachability_reason,
+            }
+
+            if structured.get("internal_error"):
+                return ScanResult(
+                    False,
+                    analysis_text or "Analysis failed",
+                    self.SOURCE_NAME,
+                    details=nav_meta,
+                    error=True,
+                )
+
+            if not reachable:
+                return ScanResult(
+                    False,
+                    analysis_text or "Currently unreachable",
+                    self.SOURCE_NAME,
+                    details=nav_meta,
+                    error=False,
+                    risk_factors={
+                        "ai_risk": "unreachable",
+                        "verdict": "Unreachable",
+                        "reachable": False,
+                        "http_status": None,
+                        "reachability_reason": reachability_reason or "UNREACHABLE",
+                    },
+                )
+
+            result = self._parse_results(analysis_text)
+            result.details = {**(result.details or {}), **nav_meta}
+            result.risk_factors = {
+                **(result.risk_factors or {}),
+                "reachable": True,
+                "http_status": http_status,
+                "reachability_reason": reachability_reason or "OK",
+            }
+
+            if not result.error and isinstance(http_status, int) and http_status >= 400:
+                status_badge = f"HTTP {http_status}" + (f" {http_status_text}" if http_status_text else "")
+                if f"HTTP {http_status}" not in result.summary:
+                    result.summary = f"[{status_badge}] {result.summary}"
+
+            return result
         except Exception as e:
-            logger.error(f"{self.SOURCE_NAME} error for {url_to_check}: {e}")
+            logger.error(f"{self.SOURCE_NAME} error for {url_to_check}: {type(e).__name__}")
             return ScanResult(False, "Analysis failed", self.SOURCE_NAME, error=True)
 
 #####################

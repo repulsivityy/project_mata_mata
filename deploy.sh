@@ -73,6 +73,7 @@ gcloud run deploy mata-backend \
   --region $REGION \
   --allow-unauthenticated \
   --memory 2Gi \
+  --timeout 240 \
   --set-secrets="VIRUSTOTAL_API_KEY=MATA_VIRUSTOTAL_API_KEY:latest,WEBRISK_API_KEY=MATA_WEBRISK_API_KEY:latest,GEMINI_APIKEY=MATA_GEMINI_APIKEY:latest" \
   --format 'value(status.url)' > .backend_url.tmp
 

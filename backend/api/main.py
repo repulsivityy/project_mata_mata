@@ -83,6 +83,20 @@ class ScanJobResponse(BaseModel):
     job_id: str
     status: str
 
+class AIScanRequest(BaseModel):
+    url: str
+
+class AIScanResponse(BaseModel):
+    url: str
+    type: str
+    reachable: bool
+    http_status: int | None = None
+    http_status_text: str | None = None
+    final_url: str | None = None
+    reachability_reason: str | None = None
+    ai_result: dict
+    final_verdict: str
+
 @app.on_event("shutdown")
 async def shutdown_event():
     logger.info("Closing orchestrator sessions...")
@@ -199,8 +213,22 @@ async def get_scan_status(job_id: str):
         del data["expireAt"]
     if "internal_error" in data:
         del data["internal_error"]
-    
+
     return data
+
+@app.post("/api/v1/scan/ai", response_model=AIScanResponse, dependencies=[Depends(verify_api_key)])
+async def scan_ai_only(request: AIScanRequest):
+    items = orchestrator.url_extractor.extract_urls_and_domains(request.url)
+    if not items:
+        raise HTTPException(status_code=400, detail="No valid URL or Domain provided in the request payload.")
+
+    target = items[0]
+    if target["type"] == "ip_address":
+        raise HTTPException(status_code=400, detail="Standalone IPs are not scannable.")
+
+    url_value = target["value"]
+    logger.info(f"Running synchronous AI-only scan for {target['type']}: {url_value}")
+    return await orchestrator.scan_ai_only(url_value, target["type"])
 
 @app.get("/health")
 async def health_check():

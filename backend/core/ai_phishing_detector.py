@@ -494,11 +494,15 @@ async def take_screenshot_with_context(browser, browser_type: str, user_agent: s
         page.on("request", handle_request)
         
         # Navigate
+        nav_response = None
         try:
-            await page.goto(url, wait_until="domcontentloaded", timeout=45000)
+            nav_response = await page.goto(url, wait_until="domcontentloaded", timeout=45000)
         except Exception as nav_error:
             print(f"Navigation error: {nav_error}")
-            await page.goto(url, wait_until="commit", timeout=30000)
+            nav_response = await page.goto(url, wait_until="commit", timeout=30000)
+        
+        http_status = nav_response.status if nav_response is not None else None
+        http_status_text = nav_response.status_text if nav_response is not None else None
         
         # Handle security warnings
         await handle_security_warnings(page, browser_type)
@@ -512,7 +516,7 @@ async def take_screenshot_with_context(browser, browser_type: str, user_agent: s
         dom_data = await extract_basic_dom_data(page)
         screenshot_bytes = await page.screenshot(full_page=True, type='png')
         
-        print(f"✅ {browser_type}: '{page_title[:30]}...', {len(dom_data['links'])} links, {len(dom_data['forms'])} forms, {len(dom_data['scripts'])} scripts, {len(network_requests)} network reqs")
+        print(f"✅ {browser_type}: HTTP {http_status} '{page_title[:30]}...', {len(dom_data['links'])} links, {len(dom_data['forms'])} forms, {len(dom_data['scripts'])} scripts, {len(network_requests)} network reqs")
         
         result = {
             "screenshot": screenshot_bytes,
@@ -523,6 +527,8 @@ async def take_screenshot_with_context(browser, browser_type: str, user_agent: s
             "html": dom_data["html"],
             "title": page_title,
             "final_url": final_url,
+            "http_status": http_status,
+            "http_status_text": http_status_text,
             "browser_type": browser_type,
             "user_agent": user_agent
         }
@@ -713,6 +719,7 @@ def identify_with_gemini_dual(screenshot1_bytes: bytes, screenshot2_bytes: bytes
 **ANALYSIS TYPE**: Comparative analysis of the same URL from two different browser/user-agent combinations.
 
 ### Browser 1 Analysis: {data1.get('user_agent', 'Unknown')}
+**HTTP Status**: {data1.get('http_status', 'Unknown')}
 **Final URL**: {data1.get('final_url', 'Unknown')}
 **Page Title**: {data1.get('title', 'Unknown')}
 **Links Found**: {len(data1.get('links', []))} - {json.dumps(data1.get('links', [])[:15])}
@@ -722,6 +729,7 @@ def identify_with_gemini_dual(screenshot1_bytes: bytes, screenshot2_bytes: bytes
 **HTML Length**: {len(data1.get('html', ''))} characters
 
 ### Browser 2 Analysis: {data2.get('user_agent', 'Unknown')}
+**HTTP Status**: {data2.get('http_status', 'Unknown')}
 **Final URL**: {data2.get('final_url', 'Unknown')}
 **Page Title**: {data2.get('title', 'Unknown')}
 **Links Found**: {len(data2.get('links', []))} - {json.dumps(data2.get('links', [])[:15])}
@@ -822,6 +830,7 @@ async def analyze_with_dual_ai(target_url: str, browser_results: dict, debug_mod
     # Prepare data for dual analysis
     data1 = {
         "user_agent": result1_ua,
+        "http_status": result1_data.get("http_status"),
         "final_url": result1_data.get("final_url"),
         "title": result1_data.get("title"),
         "links": result1_data.get("links", []),
@@ -833,6 +842,7 @@ async def analyze_with_dual_ai(target_url: str, browser_results: dict, debug_mod
     
     data2 = {
         "user_agent": result2_ua,
+        "http_status": result2_data.get("http_status"),
         "final_url": result2_data.get("final_url"),
         "title": result2_data.get("title"),
         "links": result2_data.get("links", []),
@@ -909,6 +919,7 @@ async def analyze_with_single_ai(target_url: str, browser_results: dict, debug_m
         best_data["screenshot"],
         target_url,
         {
+            "http_status": best_data.get("http_status"),
             "links": best_data["links"],
             "scripts": best_data.get("scripts", []),
             "network_requests": best_data.get("network_requests", []),
@@ -958,8 +969,8 @@ def select_best_result(browser_results: dict) -> tuple:
     if not successful_results:
         return None
     
-    # Score results (prefer more content)
-    best_score = 0
+    # Score results (prefer more content; start at -1 so empty HTTP 404/204 pages with score 0 still match)
+    best_score = -1
     best_result = None
     
     for ua_key, result in successful_results.items():
@@ -1107,6 +1118,7 @@ def identify_with_gemini(image_bytes: bytes, webpage_url: str, dom_data: dict, p
             f"- Are there background API requests sending data to suspicious external endpoints (like Telegram API)?\n\n"
             f"### 7. Domain Verification\n"
             f"**Current URL**: {webpage_url}\n"
+            f"**HTTP Status**: {dom_data.get('http_status', 'Unknown')}\n"
             f"**Check for**:\n"
             f"- HTML references to different domains than the current URL\n"
             f"- Mixed content (HTTPS site loading HTTP resources)\n"
@@ -1179,39 +1191,141 @@ def identify_with_gemini(image_bytes: bytes, webpage_url: str, dom_data: dict, p
         print("An unexpected error occurred during Gemini API analysis")
         return "AI analysis failed due to an unexpected internal error."
 
-# Updated main analysis function with smart hybrid approach
-async def analyze_url_for_phishing(target_url: str, debug_mode: bool = False) -> str:
+_GEMINI_ERROR_PREFIXES = (
+    "API request failed",
+    "AI analysis failed",
+    "AI response received, but",
+    "Could not get a clear identification",
+    "Could not get a clear dual analysis",
+    "Dual AI analysis failed",
+    "Dual analysis failed",
+)
+
+
+def _classify_navigation_failure(browser_results: dict) -> tuple[str, str]:
     """
-    Main function for phishing analysis - now uses smart hybrid dual browser approach.
-    This maintains compatibility with the Telegram bot.
+    Classifies why all browser navigations failed into (reachability_reason, summary).
     """
-    # Normalize the URL to ensure it has a protocol
-    target_url = normalize_url(target_url)
-    
-    async def analysis_logic():
+    errors = [str(v.get("error", "")) for v in (browser_results or {}).values() if isinstance(v, dict) and "error" in v]
+    combined = " | ".join(errors).lower()
+
+    if "err_name_not_resolved" in combined or "ns_error_unknown_host" in combined:
+        return "DNS_NOT_FOUND", "Currently unreachable (DNS resolution failed)"
+    if "err_connection_refused" in combined or "ns_error_connection_refused" in combined:
+        return "CONNECTION_REFUSED", "Currently unreachable (connection refused)"
+    if "err_connection_reset" in combined or "ns_error_net_reset" in combined:
+        return "CONNECTION_RESET", "Currently unreachable (connection reset)"
+    if "blockedbyclient" in combined or "blocked private" in combined or "unsafe" in combined:
+        return "BLOCKED", "Blocked by navigation safety policy"
+    if (
+        "timeout" in combined
+        or "err_connection_timed_out" in combined
+        or "ns_error_net_timeout" in combined
+    ):
+        return "TIMEOUT", "Currently unreachable (connection timed out)"
+    return "UNREACHABLE", "Currently unreachable or blocking automated browser access"
+
+
+async def analyze_url_for_phishing_structured(target_url: str, debug_mode: bool = False) -> dict:
+    """
+    Structured phishing analysis returning reachability, HTTP status, final URL, and AI output.
+    Distinguishes dead/unreachable target sites and HTTP 4xx/5xx responses from internal AI errors.
+    """
+    try:
+        target_url = normalize_url(target_url)
+    except ValueError as e:
+        return {
+            "reachable": False,
+            "http_status": None,
+            "http_status_text": None,
+            "final_url": None,
+            "reachability_reason": "BLOCKED",
+            "analysis_text": str(e),
+            "internal_error": False,
+        }
+
+    async def analysis_logic() -> dict:
         print(f"🔍 Starting smart hybrid dual-browser phishing analysis for: {target_url}")
         if debug_mode:
             print("🔍 Debug mode enabled - will include technical browser details")
         print("-" * 80)
-        
-        # Test with multiple browsers and user agents
+
         browser_results = await analyze_with_dual_browsers(target_url)
-        
-        # Smart hybrid analysis decision with debug mode
-        return await analyze_with_smart_dual_ai(target_url, browser_results, debug_mode)
+        best = select_best_result(browser_results)
+
+        if not best:
+            reason, summary = _classify_navigation_failure(browser_results)
+            return {
+                "reachable": False,
+                "http_status": None,
+                "http_status_text": None,
+                "final_url": None,
+                "reachability_reason": reason,
+                "analysis_text": summary,
+                "internal_error": False,
+            }
+
+        _, best_data = best
+        http_status = best_data.get("http_status")
+        http_status_text = best_data.get("http_status_text")
+        final_url = best_data.get("final_url")
+
+        if isinstance(http_status, int) and http_status >= 400:
+            reachability_reason = f"HTTP_{http_status}"
+        else:
+            reachability_reason = "OK"
+
+        analysis_text = await analyze_with_smart_dual_ai(target_url, browser_results, debug_mode)
+        stripped = (analysis_text or "").strip()
+        is_gemini_error = not stripped or stripped.startswith(_GEMINI_ERROR_PREFIXES)
+
+        return {
+            "reachable": True,
+            "http_status": http_status,
+            "http_status_text": http_status_text,
+            "final_url": final_url,
+            "reachability_reason": "INTERNAL_ERROR" if is_gemini_error else reachability_reason,
+            "analysis_text": analysis_text,
+            "internal_error": is_gemini_error,
+        }
 
     try:
-        # Use the timeout from the configuration section
         return await asyncio.wait_for(analysis_logic(), timeout=AI_ANALYSIS_TIMEOUT)
     except asyncio.CancelledError:
         print(f"AI analysis for {target_url} was cancelled.")
         raise
     except asyncio.TimeoutError:
         print(f"AI analysis for {target_url} timed out after {AI_ANALYSIS_TIMEOUT} seconds.")
-        return "[TIMED OUT] Smart hybrid analysis timed out. This can happen with complex websites or dual analysis."
+        return {
+            "reachable": False,
+            "http_status": None,
+            "http_status_text": None,
+            "final_url": None,
+            "reachability_reason": "ANALYSIS_TIMEOUT",
+            "analysis_text": "[TIMED OUT] Currently unreachable (smart hybrid analysis timed out).",
+            "internal_error": False,
+        }
     except Exception as e:
         print(f"\nSmart hybrid analysis failed with error: {type(e).__name__}")
-        return "[ERROR] Smart hybrid analysis failed due to an internal error."
+        return {
+            "reachable": False,
+            "http_status": None,
+            "http_status_text": None,
+            "final_url": None,
+            "reachability_reason": "INTERNAL_ERROR",
+            "analysis_text": "[ERROR] Smart hybrid analysis failed due to an internal error.",
+            "internal_error": True,
+        }
+
+
+# Updated main analysis function with smart hybrid approach
+async def analyze_url_for_phishing(target_url: str, debug_mode: bool = False) -> str:
+    """
+    Main function for phishing analysis - now uses smart hybrid dual browser approach.
+    This maintains compatibility with the Telegram bot and CLI.
+    """
+    structured = await analyze_url_for_phishing_structured(target_url, debug_mode=debug_mode)
+    return structured["analysis_text"]
 
 # --- Main Execution (only runs when script is executed directly) ---
 if __name__ == "__main__":

@@ -218,3 +218,72 @@ class ScanOrchestrator:
             logger.error(f"Error in orchestrator for {item_value}: {type(e).__name__}")
             return {"url": item_value, "error": "An internal error occurred during scan orchestration."}
 
+    async def scan_ai_only(self, item_value: str, item_type: str = "url") -> Dict:
+        """
+        Runs only AIImageChecker (skipping VirusTotal and Web Risk) and returns a clean dictionary
+        with reachability and HTTP status metadata.
+        """
+        checker = AIImageChecker()
+        try:
+            result: ScanResult = await checker.check(item_value, item_type)
+        except Exception as e:
+            logger.error(f"AI-only scan failed for {item_value}: {type(e).__name__}")
+            result = ScanResult(
+                is_malicious=False,
+                summary="Analysis failed",
+                source=AIImageChecker.SOURCE_NAME,
+                details={},
+                error=True,
+                is_pending=False,
+                risk_factors={},
+            )
+
+        details = result.details or {}
+        risk_factors = result.risk_factors or {}
+
+        reachable = details.get("reachable")
+        if reachable is None:
+            reachable = risk_factors.get("reachable")
+        if reachable is None:
+            reachable = not result.error and (risk_factors.get("ai_risk") != "unreachable")
+        reachable = bool(reachable)
+
+        http_status = details.get("http_status", risk_factors.get("http_status"))
+        http_status_text = details.get("http_status_text")
+        final_url = details.get("final_url")
+        reachability_reason = details.get("reachability_reason", risk_factors.get("reachability_reason"))
+
+        ai_result = {
+            "is_malicious": result.is_malicious,
+            "summary": result.summary,
+            "details": details,
+            "risk_factors": risk_factors,
+            "error": result.error,
+            "is_pending": result.is_pending,
+        }
+
+        if result.error:
+            final_verdict = "ERROR"
+        elif not reachable:
+            final_verdict = "UNREACHABLE"
+        else:
+            ai_risk = (risk_factors.get("ai_risk") or "").lower()
+            if ai_risk == "high" or result.is_malicious:
+                final_verdict = "DANGER"
+            elif ai_risk == "low":
+                final_verdict = "SAFE"
+            else:
+                final_verdict = "WARNING"
+
+        return {
+            "url": item_value,
+            "type": item_type,
+            "reachable": reachable,
+            "http_status": http_status,
+            "http_status_text": http_status_text,
+            "final_url": final_url,
+            "reachability_reason": reachability_reason,
+            "ai_result": ai_result,
+            "final_verdict": final_verdict,
+        }
+

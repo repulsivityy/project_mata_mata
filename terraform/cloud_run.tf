@@ -10,6 +10,7 @@ resource "google_cloud_run_v2_service" "backend" {
   ingress  = "INGRESS_TRAFFIC_ALL"
 
   template {
+    timeout = "240s"
     scaling {
       max_instance_count = 10
       min_instance_count = 0
