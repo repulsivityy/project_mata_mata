@@ -234,9 +234,9 @@ export default function MataMataDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
             {Object.entries(result.results || {}).map(([checker, data]: [string, any]) => (
               <div key={checker} className={`bg-white p-4 md:p-6 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] ${
-                data.error ? 'border-[#ffff00]' : 
-                data.risk_factors?.verdict === 'Malicious' ? 'bg-[#ff007f]/10' : 
-                data.risk_factors?.verdict === 'Suspicious' ? 'bg-[#ffff00]/10' :
+                data.error ? 'border-[#ffff00]' :
+                data.risk_factors?.verdict === 'Malicious' ? 'bg-[#ff007f]/10' :
+                (data.risk_factors?.verdict === 'Suspicious' || data.risk_factors?.verdict === 'Unreachable' || data.risk_factors?.reachable === false) ? 'bg-[#ffff00]/10' :
                 'bg-[#00ffff]/10'
               }`}>
                 <div className="flex justify-between items-start mb-4">
@@ -251,10 +251,10 @@ export default function MataMataDashboard() {
                       {checker !== "VirusTotal" ? (
                         <span className={`px-3 py-1 text-xs font-bold border-2 border-black
                           ${data.risk_factors?.verdict === 'Malicious' ? 'bg-[#ff007f] text-white' :
-                            data.risk_factors?.verdict === 'Suspicious' ? 'bg-[#ffff00] text-black' :
+                            (data.risk_factors?.verdict === 'Suspicious' || data.risk_factors?.verdict === 'Unreachable' || data.risk_factors?.reachable === false) ? 'bg-[#ffff00] text-black' :
                             'bg-[#00ffff] text-black'}
                         `}>
-                          {data.risk_factors?.verdict || (data.is_malicious ? 'Malicious' : 'Clean')}
+                          {data.risk_factors?.verdict || (data.risk_factors?.reachable === false ? 'Unreachable' : data.is_malicious ? 'Malicious' : 'Clean')}
                         </span>
                       ) : (
                         /* VirusTotal ONLY shows chip if it is Malicious */
